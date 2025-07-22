@@ -1,0 +1,141 @@
+{
+  "name": "claude-dev",
+  "displayName": "Claude Dev",
+  "description": "AI-powered code completion using Claude Code CLI",
+  "version": "0.1.0",
+  "publisher": "your-publisher-name",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "ai",
+    "claude",
+    "copilot",
+    "autocomplete",
+    "code completion"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Claude Dev",
+      "properties": {
+        "claudeDev.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable Claude Dev suggestions"
+        },
+        "claudeDev.claudeCodePath": {
+          "type": "string",
+          "default": "claude",
+          "description": "Path to Claude Code CLI executable. Use 'claude' or full path like '/Users/username/.claude/local/claude'"
+        },
+        "claudeDev.debounceMs": {
+          "type": "number",
+          "default": 300,
+          "description": "Debounce delay in milliseconds for completion requests"
+        },
+        "claudeDev.maxContextLines": {
+          "type": "number",
+          "default": 50,
+          "description": "Maximum number of context lines to send to Claude Code"
+        },
+        "claudeDev.enableLogging": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable debug logging"
+        },
+        "claudeDev.yoloMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable YOLO mode - automatically approve all tool permissions (like claude-code-chat project)"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "claudeDev.toggle",
+        "title": "Toggle Claude Dev",
+        "category": "Claude Dev"
+      },
+      {
+        "command": "claudeDev.triggerCompletion",
+        "title": "Trigger Completion",
+        "category": "Claude Dev"
+      },
+      {
+        "command": "claudeDev.openChat",
+        "title": "Open Chat",
+        "category": "Claude Dev",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "claudeDev.clearChat",
+        "title": "Clear Chat",
+        "category": "Claude Dev",
+        "icon": "$(clear-all)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "claudeDev.triggerCompletion",
+        "key": "ctrl+space",
+        "mac": "cmd+space",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "claudeDev.openChat",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "claudeDevChat",
+          "name": "Claude Dev Chat",
+          "icon": "$(comment-discussion)",
+          "contextualTitle": "Claude Dev Chat"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "claudeDev.clearChat",
+          "when": "view == claudeDevChat",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "claudeDev.openChat"
+        },
+        {
+          "command": "claudeDev.clearChat"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^16.x",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^4.9.4"
+  }
+}
