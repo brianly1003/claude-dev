@@ -9,6 +9,7 @@ export interface MCPServerConfig {
     command: string;
     args: string[];
     env?: Record<string, string>;
+    displayName?: string;
 }
 
 export interface MCPConfiguration {

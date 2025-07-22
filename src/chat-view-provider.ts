@@ -258,23 +258,102 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     private async installMCPServer(serverName: string) {
         try {
-            // Auto-configure MCP for the selected server
-            await this.mcpUITesting.autoConfigureMCP();
+            // Install specific MCP server based on name
+            await this.installSpecificMCPServer(serverName);
             
             // Send updated status back to UI
             this.sendMCPServerData();
             
             // Show success message in chat
-            const successMessage = `✅ Successfully installed ${serverName} MCP server! You can now use browser automation tools.`;
+            const successMessage = `✅ Successfully installed ${serverName} MCP server! ${this.getServerDescription(serverName)}`;
             this.conversationManager.addMessage('assistant', successMessage);
             this.updateWebview();
             
         } catch (error) {
             // Show error message in chat
-            const errorMessage = `❌ Failed to install ${serverName}: ${error}`;
+            const errorMessage = `❌ Failed to install ${serverName}: ${error instanceof Error ? error.message : error}`;
             this.conversationManager.addMessage('assistant', errorMessage);
             this.updateWebview();
         }
+    }
+
+    private async installSpecificMCPServer(serverName: string) {
+        const { MCPManager } = await import('./mcp-manager');
+        const mcpManager = new MCPManager();
+        
+        // Convert server name to consistent format for storage
+        const serverKey = this.getServerKey(serverName);
+        
+        // Check if server already exists
+        if (mcpManager.hasMCPServer(serverKey)) {
+            throw new Error(`${serverName} is already installed`);
+        }
+
+        const serverConfig = this.getPopularServerConfig(serverName);
+        if (!serverConfig) {
+            throw new Error(`Unknown server: ${serverName}`);
+        }
+
+        // Add the server configuration with consistent naming
+        mcpManager.addMCPServer(serverKey, {
+            ...serverConfig,
+            displayName: serverName  // Keep original display name
+        });
+    }
+
+    private getServerKey(serverName: string): string {
+        // Convert display name to consistent storage key
+        return serverName.toLowerCase().replace(/\s+/g, '-');
+    }
+
+    private getPopularServerConfig(serverName: string) {
+        const configs: Record<string, any> = {
+            'Context7': {
+                type: 'stdio',
+                command: 'npx',
+                args: ['@context7/mcp-server']
+            },
+            'Sequential Thinking': {
+                type: 'stdio', 
+                command: 'npx',
+                args: ['@anthropic/sequential-thinking-mcp-server']
+            },
+            'Memory': {
+                type: 'stdio',
+                command: 'npx',
+                args: ['@anthropic/memory-mcp-server']
+            },
+            'Puppeteer': {
+                type: 'stdio',
+                command: 'npx',
+                args: ['@executeautomation/puppeteer-mcp-server']
+            },
+            'Fetch': {
+                type: 'stdio',
+                command: 'npx', 
+                args: ['@anthropic/fetch-mcp-server']
+            },
+            'Filesystem': {
+                type: 'stdio',
+                command: 'npx',
+                args: ['@anthropic/filesystem-mcp-server']
+            }
+        };
+
+        return configs[serverName];
+    }
+
+    private getServerDescription(serverName: string): string {
+        const descriptions: Record<string, string> = {
+            'Context7': 'You can now access up-to-date code documentation for any project.',
+            'Sequential Thinking': 'Enhanced step-by-step reasoning capabilities are now available.',
+            'Memory': 'Knowledge graph storage and retrieval system is ready.',
+            'Puppeteer': 'Browser automation tools are now configured for UI testing.',
+            'Fetch': 'HTTP requests and web scraping capabilities are enabled.',
+            'Filesystem': 'File operations and management tools are available.'
+        };
+
+        return descriptions[serverName] || 'The server is now ready to use.';
     }
 
     private async addCustomMCPServer(serverConfig: any) {
@@ -935,6 +1014,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             color: #064e3b;
         }
 
+        .mcp-install-status.installing {
+            background: var(--claude-accent);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         .mcp-no-servers {
             text-align: center;
             color: var(--vscode-descriptionForeground);
@@ -1547,14 +1637,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             const popularGrid = document.getElementById('popularServers');
             
             popularGrid.innerHTML = popularServers.map(server => {
-                const isInstalled = configuredTools.includes(server.name.toLowerCase()) || 
-                                  (server.name === 'Puppeteer' && configuredTools.length > 0);
+                // Check if server is installed (case-insensitive comparison)
+                const isInstalled = configuredTools.some(tool => 
+                    tool.toLowerCase().includes(server.name.toLowerCase().replace(/\s+/g, '')) ||
+                    tool.toLowerCase().includes(server.name.toLowerCase())
+                );
                 
                 return \`
                     <div class="mcp-server-card \${isInstalled ? 'installed' : ''}" 
                          data-server="\${server.name}"
-                         onclick="\${isInstalled ? '' : 'installMCPServer(\\"' + server.name + '\\")'}" 
-                         style="\${isInstalled ? 'cursor: default;' : ''}">
+                         style="\${isInstalled ? 'cursor: default;' : 'cursor: pointer;'}">
                         <div class="mcp-install-status \${isInstalled ? 'installed' : ''}">
                             \${isInstalled ? 'Installed' : 'Install'}
                         </div>
@@ -1564,14 +1656,57 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     </div>
                 \`;
             }).join('');
+
+            // Add click event listeners after rendering
+            const serverCards = popularGrid.querySelectorAll('.mcp-server-card');
+            serverCards.forEach(card => {
+                const serverName = card.getAttribute('data-server');
+                const isInstalled = card.classList.contains('installed');
+                
+                if (!isInstalled) {
+                    card.addEventListener('click', () => handleServerInstallClick(serverName));
+                }
+            });
         }
 
-        function installMCPServer(serverName) {
+        function handleServerInstallClick(serverName) {
+            console.log('Installing MCP server:', serverName);
+            
+            // Find the card and update its state to show loading
+            const card = document.querySelector(\`[data-server="\${serverName}"]\`);
+            if (!card) {
+                console.error('Server card not found:', serverName);
+                return;
+            }
+            
+            // Update card to show loading state
+            const installStatus = card.querySelector('.mcp-install-status');
+            const originalText = installStatus.textContent;
+            
+            installStatus.textContent = 'Installing...';
+            installStatus.classList.add('installing');
+            card.style.pointerEvents = 'none';
+            card.style.opacity = '0.7';
+            
+            // Send installation request
+            console.log('Sending install request for:', serverName);
             vscode.postMessage({ 
                 type: 'installMCPServer', 
                 serverName: serverName 
             });
+            
+            // Reset state after timeout (in case of error)
+            setTimeout(() => {
+                if (installStatus.textContent === 'Installing...') {
+                    console.warn('Installation timeout for:', serverName);
+                    installStatus.textContent = originalText;
+                    installStatus.classList.remove('installing');
+                    card.style.pointerEvents = '';
+                    card.style.opacity = '';
+                }
+            }, 10000); // 10 second timeout
         }
+
 
         function updateMCPModal(data) {
             const configuredStatus = document.getElementById('configuredStatus');
@@ -1588,18 +1723,28 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             let icon = '🔧';
                             let description = 'Custom MCP server';
                             
-                            if (tool.toLowerCase().includes('playwright')) {
-                                icon = '🎭';
-                                description = 'Playwright browser automation';
+                            // Match popular servers by name
+                            if (tool.toLowerCase().includes('context')) {
+                                icon = '📖';
+                                description = 'Up-to-date Code Docs For Any Project';
+                            } else if (tool.toLowerCase().includes('sequential')) {
+                                icon = '🧠';
+                                description = 'Step-by-step reasoning capabilities';
+                            } else if (tool.toLowerCase().includes('memory')) {
+                                icon = '🧠';
+                                description = 'Knowledge graph storage';
                             } else if (tool.toLowerCase().includes('puppeteer')) {
                                 icon = '🎭';
-                                description = 'Puppeteer browser automation';
+                                description = 'Browser automation';
                             } else if (tool.toLowerCase().includes('fetch')) {
                                 icon = '🌐';
                                 description = 'HTTP requests & web scraping';
                             } else if (tool.toLowerCase().includes('filesystem')) {
                                 icon = '📁';
                                 description = 'File operations & management';
+                            } else if (tool.toLowerCase().includes('playwright')) {
+                                icon = '🎭';
+                                description = 'Playwright browser automation';
                             }
                             
                             return \`
