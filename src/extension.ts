@@ -69,7 +69,7 @@ function registerCompletionProvider() {
 }
 
 function registerChatView(context: vscode.ExtensionContext) {
-    chatViewProvider = new ChatViewProvider(context.extensionUri, claudeCodeService);
+    chatViewProvider = new ChatViewProvider(context.extensionUri, claudeCodeService, context);
     
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(ChatViewProvider.viewType, chatViewProvider)

@@ -1,24 +1,32 @@
 import * as vscode from 'vscode';
-import { ClaudeCodeService, CompletionRequest } from './claude-code-service';
-
-export interface ChatMessage {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    timestamp: number;
-}
+import { ClaudeCodeService, CompletionRequest, StreamingCompletionOptions } from './claude-code-service';
+import { ConversationManager } from './conversation-manager';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'claudeDevChat';
     private _view?: vscode.WebviewView;
-    private messages: ChatMessage[] = [];
     private claudeCodeService: ClaudeCodeService;
+    private conversationManager: ConversationManager;
+    private streamingMessageId: string | null = null;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
-        claudeCodeService: ClaudeCodeService
+        claudeCodeService: ClaudeCodeService,
+        context: vscode.ExtensionContext
     ) {
         this.claudeCodeService = claudeCodeService;
+        this.conversationManager = new ConversationManager(context);
+        this.loadMostRecentConversation();
+    }
+
+    private async loadMostRecentConversation(): Promise<void> {
+        const recent = await this.conversationManager.loadMostRecentConversation();
+        if (recent) {
+            // Update webview if it's already initialized
+            if (this._view) {
+                this.updateWebview();
+            }
+        }
     }
 
     public resolveWebviewView(
@@ -54,14 +62,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             return;
         }
 
-        const userMessage: ChatMessage = {
-            id: Date.now().toString(),
-            role: 'user',
-            content: message.trim(),
-            timestamp: Date.now()
-        };
+        // Add user message to conversation and auto-save
+        this.conversationManager.addMessage('user', message.trim());
+        this.updateWebview();
 
-        this.messages.push(userMessage);
+        // Create a streaming assistant message placeholder
+        const streamingMessage = this.conversationManager.addMessage('assistant', '...');
+        this.streamingMessageId = streamingMessage.id;
         this.updateWebview();
 
         try {
@@ -72,7 +79,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 language: 'text'
             };
 
-            const response = await this.claudeCodeService.getCompletion(completionRequest);
+            const streamingOptions: StreamingCompletionOptions = {
+                onStreamingUpdate: (partialResponse: string, isComplete: boolean) => {
+                    this.handleStreamingUpdate(partialResponse, isComplete);
+                }
+            };
+
+            const response = await this.claudeCodeService.getCompletion(completionRequest, streamingOptions);
             
             console.log('Chat response:', {
                 suggestion: response.suggestion,
@@ -81,35 +94,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 suggestionLength: response.suggestion?.length || 0
             });
             
-            const assistantMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: response.suggestion && response.suggestion.trim() 
-                    ? response.suggestion
-                    : (response.error || "Sorry, I couldn't process your request. Please check if Claude Code is properly configured."),
-                timestamp: Date.now()
-            };
+            const responseContent = response.suggestion && response.suggestion.trim() 
+                ? response.suggestion
+                : (response.error || "Sorry, I couldn't process your request. Please check if Claude Code is properly configured.");
 
-            this.messages.push(assistantMessage);
-            this.updateWebview();
+            // Update the streaming message with final content
+            this.updateStreamingMessage(responseContent, true);
 
         } catch (error) {
-            const errorMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
-                timestamp: Date.now()
-            };
-
-            this.messages.push(errorMessage);
-            this.updateWebview();
+            const errorContent = `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+            
+            // Update the streaming message with error content
+            this.updateStreamingMessage(errorContent, true);
         }
     }
 
     private buildContext(): string {
+        // Include conversation history first
+        let context = this.conversationManager.getConversationContext() + '\n\n';
+        
         // Always include workspace information
         const workspaceFolders = vscode.workspace.workspaceFolders;
-        let context = '';
         
         if (workspaceFolders && workspaceFolders.length > 0) {
             context += `--- Current Workspace ---\n`;
@@ -152,16 +157,58 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         return context;
     }
 
+    private handleStreamingUpdate(partialResponse: string, isComplete: boolean) {
+        this.updateStreamingMessage(partialResponse, isComplete);
+    }
+
+    private updateStreamingMessage(content: string, isComplete: boolean) {
+        if (!this.streamingMessageId) return;
+
+        const currentConversation = this.conversationManager.getCurrentConversation();
+        if (!currentConversation) return;
+
+        // Find and update the streaming message
+        const messageIndex = currentConversation.messages.findIndex(msg => msg.id === this.streamingMessageId);
+        if (messageIndex !== -1) {
+            currentConversation.messages[messageIndex].content = content;
+            currentConversation.metadata.lastActivity = Date.now();
+
+            // Send real-time update to webview
+            this.sendStreamingUpdate(this.streamingMessageId, content, isComplete);
+
+            // Save to storage when complete
+            if (isComplete) {
+                this.conversationManager.getCurrentConversation(); // Trigger save
+                this.streamingMessageId = null;
+            }
+        }
+    }
+
+    private sendStreamingUpdate(messageId: string, content: string, isComplete: boolean) {
+        if (this._view) {
+            this._view.webview.postMessage({
+                type: 'streamingUpdate',
+                messageId: messageId,
+                content: content,
+                isComplete: isComplete
+            });
+        }
+    }
+
     public clearChat() {
-        this.messages = [];
+        this.conversationManager.clearHistory();
+        this.conversationManager.startNewConversation();
         this.updateWebview();
     }
 
     private updateWebview() {
         if (this._view) {
+            const currentConversation = this.conversationManager.getCurrentConversation();
+            const messages = currentConversation ? currentConversation.messages : [];
+            
             this._view.webview.postMessage({
                 type: 'updateMessages',
-                messages: this.messages
+                messages: messages
             });
         }
     }
@@ -461,6 +508,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             transform: translateX(1px);
         }
 
+        /* Streaming cursor animation */
+        .streaming-cursor {
+            color: var(--claude-accent);
+            font-weight: bold;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
         .empty-state {
             flex: 1;
             display: flex;
@@ -704,7 +764,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 const sender = isUser ? 'You' : 'Claude';
                 
                 return \`
-                    <div class="message \${msg.role}">
+                    <div class="message \${msg.role}" data-message-id="\${msg.id}">
                         <div class="message-header">
                             <div class="message-avatar">\${avatar}</div>
                             <span>\${sender}</span>
@@ -731,6 +791,49 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             return formatted;
         }
 
+        function updateStreamingMessage(messageId, content, isComplete) {
+            // Find existing message element by data attribute or create new one
+            const existingMessage = messagesContainer.querySelector(\`[data-message-id="\${messageId}"]\`);
+            
+            if (existingMessage) {
+                // Update existing streaming message
+                const contentElement = existingMessage.querySelector('.message-content');
+                if (contentElement) {
+                    const formattedContent = formatMessageContent(content);
+                    contentElement.innerHTML = formattedContent + (isComplete ? '' : '<span class="streaming-cursor">|</span>');
+                }
+            } else {
+                // Create new streaming message if not found
+                const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const formattedContent = formatMessageContent(content);
+                
+                const messageHtml = \`
+                    <div class="message assistant" data-message-id="\${messageId}">
+                        <div class="message-header">
+                            <div class="message-avatar">C</div>
+                            <span>Claude</span>
+                            <span>•</span>
+                            <span>\${time}</span>
+                        </div>
+                        <div class="message-content">\${formattedContent}\${isComplete ? '' : '<span class="streaming-cursor">|</span>'}</div>
+                    </div>
+                \`;
+                
+                messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
+            }
+            
+            // Auto-scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Remove streaming cursor when complete
+            if (isComplete) {
+                const cursor = messagesContainer.querySelector(\`[data-message-id="\${messageId}"] .streaming-cursor\`);
+                if (cursor) {
+                    cursor.remove();
+                }
+            }
+        }
+
         function autoResize() {
             messageInput.style.height = 'auto';
             const newHeight = Math.min(messageInput.scrollHeight, 100);
@@ -754,6 +857,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     renderMessages(message.messages);
                     isWaiting = false;
                     sendButton.disabled = false;
+                    break;
+                case 'streamingUpdate':
+                    updateStreamingMessage(message.messageId, message.content, message.isComplete);
+                    if (message.isComplete) {
+                        isWaiting = false;
+                        sendButton.disabled = false;
+                    }
                     break;
             }
         });

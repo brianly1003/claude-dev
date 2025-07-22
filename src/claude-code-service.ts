@@ -19,6 +19,10 @@ export interface CompletionResponse {
   error?: string;
 }
 
+export interface StreamingCompletionOptions {
+  onStreamingUpdate?: (partialResponse: string, isComplete: boolean) => void;
+}
+
 export class ClaudeCodeService {
   private config: ClaudeCodeConfig;
   private outputChannel: vscode.OutputChannel;
@@ -40,7 +44,8 @@ export class ClaudeCodeService {
   }
 
   public async getCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
+    options?: StreamingCompletionOptions
   ): Promise<CompletionResponse> {
     this.log(`Requesting completion for ${request.language} code using SDK`);
 
@@ -126,9 +131,50 @@ export class ClaudeCodeService {
                 if (block.type === 'text' && block.text) {
                   accumulatedResponse += block.text + '\n\n';
                   this.log(`Added text: "${block.text.substring(0, 100)}..."`);
+                  
+                  // Stream update to UI immediately
+                  if (options?.onStreamingUpdate) {
+                    options.onStreamingUpdate(accumulatedResponse, false);
+                  }
                 } else if (block.type === 'tool_use') {
                   this.log(`Claude is using tool: ${block.name} with input: ${JSON.stringify(block.input).substring(0, 100)}...`);
-                  accumulatedResponse += `[Using tool: ${block.name}]\n`;
+                  
+                  // Show detailed tool usage information
+                  let toolDetails = `**🔧 Using ${block.name}**\n`;
+                  
+                  if (block.name === 'Bash' && block.input.command) {
+                    toolDetails += `Command: \`${block.input.command}\`\n`;
+                    if (block.input.description) {
+                      toolDetails += `Purpose: ${block.input.description}\n`;
+                    }
+                  } else if (block.name === 'Read' && block.input.file_path) {
+                    toolDetails += `Reading file: \`${block.input.file_path}\`\n`;
+                  } else if (block.name === 'Edit' && block.input.file_path) {
+                    toolDetails += `Editing file: \`${block.input.file_path}\`\n`;
+                    if (block.input.old_string) {
+                      toolDetails += `Replacing: \`${block.input.old_string.substring(0, 50)}${block.input.old_string.length > 50 ? '...' : ''}\`\n`;
+                    }
+                  } else if (block.name === 'Write' && block.input.file_path) {
+                    toolDetails += `Writing to: \`${block.input.file_path}\`\n`;
+                  } else if (block.name === 'LS' && block.input.path) {
+                    toolDetails += `Listing directory: \`${block.input.path}\`\n`;
+                  } else if (block.name === 'Grep' && block.input.pattern) {
+                    toolDetails += `Searching for: \`${block.input.pattern}\`\n`;
+                    if (block.input.path) {
+                      toolDetails += `In: \`${block.input.path}\`\n`;
+                    }
+                  } else {
+                    // Generic tool details for other tools
+                    const inputStr = JSON.stringify(block.input, null, 2);
+                    toolDetails += `Input: \`\`\`json\n${inputStr}\n\`\`\`\n`;
+                  }
+                  
+                  accumulatedResponse += toolDetails + '\n';
+                  
+                  // Stream tool usage update to UI immediately
+                  if (options?.onStreamingUpdate) {
+                    options.onStreamingUpdate(accumulatedResponse, false);
+                  }
                 }
               }
             }
@@ -144,9 +190,22 @@ export class ClaudeCodeService {
 
         if (accumulatedResponse.trim()) {
           this.log(`Final response: ${accumulatedResponse.substring(0, 100)}...`);
+          
+          // Send final streaming update with completion flag
+          if (options?.onStreamingUpdate) {
+            options.onStreamingUpdate(accumulatedResponse.trim(), true);
+          }
+          
           return { suggestion: accumulatedResponse.trim() };
         } else {
-          return { suggestion: "", error: "No response received from Claude Code SDK" };
+          const errorMsg = "No response received from Claude Code SDK";
+          
+          // Send error as streaming update
+          if (options?.onStreamingUpdate) {
+            options.onStreamingUpdate(errorMsg, true);
+          }
+          
+          return { suggestion: "", error: errorMsg };
         }
 
       } catch (error: any) {
