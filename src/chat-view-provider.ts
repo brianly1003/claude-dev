@@ -320,32 +320,32 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             'Context7': {
                 type: 'stdio',
                 command: 'npx',
-                args: ['@context7/mcp-server']
+                args: ['-y', '@context7/mcp-server']
             },
             'Sequential Thinking': {
                 type: 'stdio', 
                 command: 'npx',
-                args: ['@anthropic/sequential-thinking-mcp-server']
+                args: ['-y', '@modelcontextprotocol/server-sequential-thinking']
             },
             'Memory': {
                 type: 'stdio',
                 command: 'npx',
-                args: ['@anthropic/memory-mcp-server']
+                args: ['-y', '@modelcontextprotocol/server-memory']
             },
             'Puppeteer': {
                 type: 'stdio',
                 command: 'npx',
-                args: ['@executeautomation/puppeteer-mcp-server']
+                args: ['-y', '@modelcontextprotocol/server-puppeteer']
             },
             'Fetch': {
                 type: 'stdio',
                 command: 'npx', 
-                args: ['@anthropic/fetch-mcp-server']
+                args: ['-y', '@modelcontextprotocol/server-fetch']
             },
             'Filesystem': {
                 type: 'stdio',
                 command: 'npx',
-                args: ['@anthropic/filesystem-mcp-server']
+                args: ['-y', '@modelcontextprotocol/server-filesystem']
             }
         };
 
@@ -895,12 +895,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             border: 1px solid var(--vscode-panel-border);
             border-radius: var(--border-radius);
             width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
+            max-width: 650px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             transform: scale(0.95) translateY(-20px);
             transition: transform 0.3s ease;
+        }
+
+        .mcp-modal-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
         }
 
         .mcp-modal-overlay.visible .mcp-modal {
@@ -936,9 +943,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             background: var(--vscode-button-secondaryBackground);
         }
 
-        .mcp-modal-content {
-            padding: 24px;
-        }
 
         .mcp-section {
             margin-bottom: 32px;
@@ -1859,6 +1863,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
 
         function updateMCPModal(data) {
+            console.log('Updating MCP Modal with data:', data);
             const configuredStatus = document.getElementById('configuredStatus');
             const configuredServers = document.getElementById('configuredServers');
             
@@ -1906,20 +1911,29 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     </div>
                 \`;
 
-                // Add event listeners for Edit/Delete buttons
-                configuredServers.querySelectorAll('.mcp-configured-action-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const action = btn.getAttribute('data-action');
-                        const serverName = btn.getAttribute('data-server');
-                        
-                        if (action === 'delete') {
-                            handleDeleteServer(serverName);
-                        } else if (action === 'edit') {
-                            handleEditServer(serverName);
-                        }
+                // Add event listeners for Edit/Delete buttons after rendering
+                setTimeout(() => {
+                    const actionButtons = configuredServers.querySelectorAll('.mcp-configured-action-btn');
+                    console.log('Found action buttons:', actionButtons.length);
+                    
+                    actionButtons.forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            const action = btn.getAttribute('data-action');
+                            const serverName = btn.getAttribute('data-server');
+                            
+                            console.log('Button clicked:', action, serverName);
+                            
+                            if (action === 'delete') {
+                                handleDeleteServer(serverName);
+                            } else if (action === 'edit') {
+                                handleEditServer(serverName);
+                            }
+                        });
                     });
-                });
+                }, 100); // Small delay to ensure DOM is ready
             } else {
                 configuredStatus.textContent = '0 configured';
                 configuredStatus.classList.remove('configured');
@@ -1978,6 +1992,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
         function handleDeleteServer(serverName) {
             if (confirm(\`Are you sure you want to delete the "\${serverName}" MCP server?\`)) {
+                console.log('Deleting server:', serverName);
                 vscode.postMessage({
                     type: 'deleteMCPServer',
                     serverName: serverName
@@ -1988,6 +2003,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         function handleEditServer(serverName) {
             // For now, just show a message that editing is not implemented
             // In the future, this could open the custom server form pre-populated
+            console.log('Edit server:', serverName);
             vscode.postMessage({
                 type: 'editMCPServer', 
                 serverName: serverName
