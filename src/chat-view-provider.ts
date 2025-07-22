@@ -174,16 +174,78 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Dev Chat</title>
     <style>
+        :root {
+            --claude-gradient: linear-gradient(135deg, #FF6B35 0%, #FF8E53 50%, #FFA07A 100%);
+            --claude-accent: #FF6B35;
+            --claude-accent-hover: #FF8E53;
+            --claude-accent-light: rgba(255, 107, 53, 0.1);
+            --claude-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);
+            --border-radius: 12px;
+            --border-radius-small: 8px;
+            --spacing: 16px;
+            --animation-duration: 0.2s;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: var(--vscode-font-family);
+            font-family: var(--vscode-font-family), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             font-size: var(--vscode-font-size);
             color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
+            background: linear-gradient(135deg, var(--vscode-editor-background) 0%, var(--vscode-panel-background) 100%);
             margin: 0;
             padding: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing);
+            background: var(--vscode-titleBar-activeBackground);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .claude-logo {
+            width: 28px;
+            height: 28px;
+            background: var(--claude-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: var(--claude-shadow);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: #4ADE80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         .chat-container {
@@ -191,98 +253,212 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             display: flex;
             flex-direction: column;
             height: 100%;
+            overflow: hidden;
         }
 
         .messages {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: var(--spacing);
+            scroll-behavior: smooth;
             scrollbar-width: thin;
+            scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: var(--vscode-scrollbarSlider-background);
+            border-radius: 3px;
         }
 
         .message {
-            margin-bottom: 15px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            max-width: 90%;
-            word-wrap: break-word;
+            margin-bottom: 24px;
+            animation: messageIn var(--animation-duration) ease-out;
         }
 
-        .message.user {
-            background-color: var(--vscode-button-background);
+        @keyframes messageIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .message-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 10px;
+        }
+
+        .message.user .message-avatar {
+            background: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
-            margin-left: auto;
-            text-align: right;
         }
 
-        .message.assistant {
-            background-color: var(--vscode-input-background);
+        .message.assistant .message-avatar {
+            background: var(--claude-gradient);
+            color: white;
+        }
+
+        .message-content {
+            padding: 16px 20px;
+            border-radius: var(--border-radius);
+            line-height: 1.6;
+            position: relative;
+        }
+
+        .message.user .message-content {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            margin-left: 60px;
+            border-bottom-right-radius: var(--border-radius-small);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .message.assistant .message-content {
+            background: var(--vscode-input-background);
             border: 1px solid var(--vscode-input-border);
-            margin-right: auto;
+            margin-right: 60px;
+            border-bottom-left-radius: var(--border-radius-small);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .message pre {
-            background-color: var(--vscode-textCodeBlock-background);
-            padding: 8px;
-            border-radius: 4px;
+            background: var(--vscode-textCodeBlock-background);
+            padding: 16px;
+            border-radius: var(--border-radius-small);
             overflow-x: auto;
-            margin: 8px 0;
+            margin: 12px 0;
+            border-left: 3px solid var(--claude-accent);
+            font-family: var(--vscode-editor-font-family);
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .message code {
-            background-color: var(--vscode-textCodeBlock-background);
-            padding: 2px 4px;
-            border-radius: 3px;
+            background: var(--claude-accent-light);
+            color: var(--claude-accent);
+            padding: 3px 6px;
+            border-radius: 4px;
             font-family: var(--vscode-editor-font-family);
+            font-size: 0.9em;
         }
 
         .input-container {
-            padding: 10px;
+            padding: 12px;
+            background: var(--vscode-panel-background);
             border-top: 1px solid var(--vscode-panel-border);
-            background-color: var(--vscode-panel-background);
+        }
+
+        .input-wrapper {
+            position: relative;
+            background: var(--vscode-input-background);
+            border: 2px solid var(--vscode-input-border);
+            border-radius: var(--border-radius);
+            transition: all var(--animation-duration) ease;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--claude-accent);
+            box-shadow: 0 0 0 3px var(--claude-accent-light);
         }
 
         .input-row {
             display: flex;
+            align-items: flex-end;
             gap: 8px;
+            padding: 8px 12px;
         }
 
         #messageInput {
             flex: 1;
-            padding: 8px;
-            border: 1px solid var(--vscode-input-border);
-            background-color: var(--vscode-input-background);
+            border: none;
+            background: transparent;
             color: var(--vscode-input-foreground);
-            border-radius: 4px;
-            font-size: inherit;
+            font-size: 14px;
             font-family: inherit;
-            resize: vertical;
+            resize: none;
+            outline: none;
             min-height: 20px;
             max-height: 100px;
+            line-height: 1.4;
         }
 
-        #messageInput:focus {
-            outline: 1px solid var(--vscode-focusBorder);
+        #messageInput::placeholder {
+            color: var(--vscode-input-placeholderForeground);
         }
 
-        .button {
-            padding: 8px 16px;
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
+        .send-button {
+            width: 28px;
+            height: 28px;
+            background: var(--claude-gradient);
+            color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--animation-duration) ease;
+            box-shadow: var(--claude-shadow);
+            flex-shrink: 0;
         }
 
-        .button:hover {
-            background-color: var(--vscode-button-hoverBackground);
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 25px rgba(255, 107, 53, 0.25);
         }
 
-        .button:disabled {
-            background-color: var(--vscode-button-secondaryBackground);
+        .send-button:disabled {
+            background: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .send-icon {
+            width: 14px;
+            height: 14px;
+            transition: transform var(--animation-duration) ease;
+        }
+
+        .send-button:hover:not(:disabled) .send-icon {
+            transform: translateX(1px);
         }
 
         .empty-state {
@@ -293,62 +469,149 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             flex-direction: column;
             color: var(--vscode-descriptionForeground);
             text-align: center;
-            padding: 20px;
+            padding: 40px 20px;
         }
 
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.6;
+        .empty-state-logo {
+            width: 80px;
+            height: 80px;
+            background: var(--claude-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 36px;
+            margin-bottom: 24px;
+            box-shadow: var(--claude-shadow);
+            animation: float 3s ease-in-out infinite;
         }
 
-        .timestamp {
-            font-size: 0.8em;
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .empty-state h2 {
+            margin: 0 0 16px 0;
+            font-size: 24px;
+            background: var(--claude-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .empty-state p {
+            margin: 0 0 12px 0;
+            line-height: 1.6;
+            opacity: 0.8;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 24px 0;
+            text-align: left;
+            max-width: 300px;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
             color: var(--vscode-descriptionForeground);
-            margin-top: 4px;
         }
 
-        .loading {
-            opacity: 0.7;
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            background: var(--claude-accent-light);
+            color: var(--claude-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
         }
 
-        .loading::after {
-            content: "...";
-            animation: dots 1s steps(5, end) infinite;
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 20px;
+            background: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: var(--border-radius);
+            margin-right: 60px;
+            margin-bottom: 24px;
+            animation: messageIn var(--animation-duration) ease-out;
         }
 
-        @keyframes dots {
-            0%, 20% { 
-                color: rgba(0,0,0,0); 
-                text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0);
-            }
-            40% { 
-                color: var(--vscode-foreground); 
-                text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0);
-            }
-            60% { 
-                text-shadow: .25em 0 0 var(--vscode-foreground), .5em 0 0 rgba(0,0,0,0);
-            }
-            80%, 100% { 
-                text-shadow: .25em 0 0 var(--vscode-foreground), .5em 0 0 var(--vscode-foreground);
-            }
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--claude-accent);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: scale(1); opacity: 0.5; }
+            30% { transform: scale(1.2); opacity: 1; }
         }
     </style>
 </head>
 <body>
+    <div class="chat-header">
+        <div class="chat-title">
+            <div class="claude-logo">C</div>
+            <span>Claude Dev</span>
+            <div class="status-indicator"></div>
+        </div>
+    </div>
+
     <div class="chat-container">
         <div class="messages" id="messages">
             <div class="empty-state">
-                <div class="empty-state-icon">💬</div>
-                <h3>Welcome to Claude Dev Chat!</h3>
-                <p>Ask questions about your code, request explanations, or get help with programming tasks.</p>
-                <p>Type your message below to get started.</p>
+                <div class="empty-state-logo">C</div>
+                <h2>Claude Dev Assistant</h2>
+                <p>Your AI-powered coding companion</p>
+                <p>I can explore your codebase, explain complex logic, implement features, and help debug issues.</p>
+                
+                <ul class="feature-list">
+                    <li><div class="feature-icon">📁</div> Explore project structure</li>
+                    <li><div class="feature-icon">🔍</div> Analyze and explain code</li>
+                    <li><div class="feature-icon">✨</div> Generate new features</li>
+                    <li><div class="feature-icon">🐛</div> Debug and fix issues</li>
+                </ul>
             </div>
         </div>
+        
         <div class="input-container">
-            <div class="input-row">
-                <textarea id="messageInput" placeholder="Ask Claude Dev anything..." rows="1"></textarea>
-                <button class="button" id="sendButton">Send</button>
+            <div class="input-wrapper">
+                <div class="input-row">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Ask me about your code, request features, or get help debugging..."
+                        rows="1"
+                    ></textarea>
+                    <button class="send-button" id="sendButton">
+                        <svg class="send-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -366,7 +629,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
             isWaiting = true;
             sendButton.disabled = true;
-            sendButton.textContent = 'Sending...';
+            showTypingIndicator();
             
             vscode.postMessage({
                 type: 'sendMessage',
@@ -377,26 +640,78 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             autoResize();
         }
 
+        function showTypingIndicator() {
+            const typingHtml = \`
+                <div class="typing-indicator">
+                    <div class="message-avatar" style="background: var(--claude-gradient); color: white;">C</div>
+                    <span style="color: var(--vscode-descriptionForeground);">Claude is thinking</span>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            \`;
+            
+            const emptyState = messagesContainer.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            
+            messagesContainer.insertAdjacentHTML('beforeend', typingHtml);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = messagesContainer.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
         function renderMessages(messages) {
+            hideTypingIndicator();
+            
             if (messages.length === 0) {
                 messagesContainer.innerHTML = \`
                     <div class="empty-state">
-                        <div class="empty-state-icon">💬</div>
-                        <h3>Welcome to Claude Dev Chat!</h3>
-                        <p>Ask questions about your code, request explanations, or get help with programming tasks.</p>
-                        <p>Type your message below to get started.</p>
+                        <div class="empty-state-logo">C</div>
+                        <h2>Claude Dev Assistant</h2>
+                        <p>Your AI-powered coding companion</p>
+                        <p>I can explore your codebase, explain complex logic, implement features, and help debug issues.</p>
+                        
+                        <ul class="feature-list">
+                            <li><div class="feature-icon">📁</div> Explore project structure</li>
+                            <li><div class="feature-icon">🔍</div> Analyze and explain code</li>
+                            <li><div class="feature-icon">✨</div> Generate new features</li>
+                            <li><div class="feature-icon">🐛</div> Debug and fix issues</li>
+                        </ul>
                     </div>
                 \`;
                 return;
             }
 
+            const emptyState = messagesContainer.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+
             messagesContainer.innerHTML = messages.map(msg => {
-                const time = new Date(msg.timestamp).toLocaleTimeString();
+                const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const content = formatMessageContent(msg.content);
+                const isUser = msg.role === 'user';
+                const avatar = isUser ? 'You' : 'C';
+                const sender = isUser ? 'You' : 'Claude';
+                
                 return \`
                     <div class="message \${msg.role}">
-                        <div>\${content}</div>
-                        <div class="timestamp">\${time}</div>
+                        <div class="message-header">
+                            <div class="message-avatar">\${avatar}</div>
+                            <span>\${sender}</span>
+                            <span>•</span>
+                            <span>\${time}</span>
+                        </div>
+                        <div class="message-content">\${content}</div>
                     </div>
                 \`;
             }).join('');
@@ -405,10 +720,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
 
         function formatMessageContent(content) {
-            // Simple markdown-like formatting
+            // Enhanced markdown-like formatting
             let formatted = content
                 .replace(/\`\`\`([\\s\\S]*?)\`\`\`/g, '<pre><code>$1</code></pre>')
                 .replace(/\`([^\`]+)\`/g, '<code>$1</code>')
+                .replace(/\\*\\*([^\\*]+)\\*\\*/g, '<strong>$1</strong>')
+                .replace(/\\*([^\\*]+)\\*/g, '<em>$1</em>')
                 .replace(/\\n/g, '<br>');
             
             return formatted;
@@ -416,7 +733,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
         function autoResize() {
             messageInput.style.height = 'auto';
-            messageInput.style.height = Math.min(messageInput.scrollHeight, 100) + 'px';
+            const newHeight = Math.min(messageInput.scrollHeight, 100);
+            messageInput.style.height = newHeight + 'px';
         }
 
         messageInput.addEventListener('input', autoResize);
@@ -436,10 +754,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     renderMessages(message.messages);
                     isWaiting = false;
                     sendButton.disabled = false;
-                    sendButton.textContent = 'Send';
                     break;
             }
         });
+
+        // Initialize
+        autoResize();
     </script>
 </body>
 </html>`;
