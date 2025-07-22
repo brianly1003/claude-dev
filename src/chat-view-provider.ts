@@ -66,6 +66,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     await this.addCustomMCPServer(data.serverConfig);
                     break;
                 case 'deleteMCPServer':
+                    console.log('Received deleteMCPServer message with data:', data);
                     await this.deleteMCPServer(data.serverName);
                     break;
                 case 'editMCPServer':
@@ -433,16 +434,25 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     private async deleteMCPServer(serverName: string) {
         try {
+            console.log('ChatViewProvider.deleteMCPServer() - Attempting to delete server:', serverName);
+            
             const { MCPManager } = await import('./mcp-manager');
             const mcpManager = new MCPManager();
+            
+            // Reload config to ensure latest state
+            mcpManager.reloadConfiguration();
             
             // Check if server exists
             if (!mcpManager.hasMCPServer(serverName)) {
                 throw new Error(`Server "${serverName}" not found`);
             }
 
+            console.log('ChatViewProvider.deleteMCPServer() - Server found, proceeding with deletion');
+
             // Remove the server
             mcpManager.removeMCPServer(serverName);
+
+            console.log('ChatViewProvider.deleteMCPServer() - Server removed, updating UI');
 
             // Send updated status back to UI
             this.sendMCPServerData();
@@ -453,6 +463,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             this.updateWebview();
 
         } catch (error) {
+            console.error('ChatViewProvider.deleteMCPServer() - Error:', error);
+            
             // Show error message in chat
             const errorMessage = `❌ Failed to delete MCP server "${serverName}": ${error instanceof Error ? error.message : error}`;
             this.conversationManager.addMessage('assistant', errorMessage);
@@ -461,11 +473,42 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     private async editMCPServer(serverName: string) {
-        // For now, show a message that editing is not yet implemented
-        // In the future, this could open a pre-populated form
-        const message = `ℹ️ Editing MCP servers is not yet implemented. You can delete "${serverName}" and add a new one with updated configuration.`;
-        this.conversationManager.addMessage('assistant', message);
-        this.updateWebview();
+        try {
+            console.log('ChatViewProvider.editMCPServer() - Edit requested for server:', serverName);
+            
+            // Get the current server configuration
+            const { MCPManager } = await import('./mcp-manager');
+            const mcpManager = new MCPManager();
+            mcpManager.reloadConfiguration();
+            
+            const server = mcpManager.getMCPServer(serverName);
+            
+            if (!server) {
+                throw new Error(`Server "${serverName}" not found`);
+            }
+
+            // For now, show the current configuration and suggest manual recreation
+            const configDetails = `**Current Configuration for "${serverName}":**
+- **Command:** \`${server.command}\`
+- **Arguments:** \`${server.args.join(' ')}\`
+- **Type:** ${server.type.toUpperCase()}
+${Object.keys(server.env || {}).length > 0 ? `- **Environment Variables:** ${Object.keys(server.env || {}).length} configured` : ''}
+
+**To modify this server:**
+1. Click "Delete" to remove the current configuration
+2. Click "+ Add MCP Server" to create a new one with your desired settings
+3. Or use the chat command: \`Configure custom MCP server\`
+
+**Note:** Direct editing will be available in a future update. For now, deletion and recreation is the recommended approach.`;
+
+            this.conversationManager.addMessage('assistant', `ℹ️ **MCP Server Edit Request**\n\n${configDetails}`);
+            this.updateWebview();
+
+        } catch (error) {
+            const errorMessage = `❌ Failed to get server details for "${serverName}": ${error instanceof Error ? error.message : error}`;
+            this.conversationManager.addMessage('assistant', errorMessage);
+            this.updateWebview();
+        }
     }
 
     private _getHtmlForWebview(_webview: vscode.Webview) {
@@ -1917,24 +1960,34 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 // Add event listeners for Edit/Delete buttons after rendering
                 setTimeout(() => {
                     const actionButtons = configuredServers.querySelectorAll('.mcp-configured-action-btn');
-                    console.log('Found action buttons:', actionButtons.length);
+                    console.log('Setting up event listeners for', actionButtons.length, 'action buttons');
                     
-                    actionButtons.forEach(btn => {
-                        btn.addEventListener('click', (e) => {
+                    actionButtons.forEach((btn, index) => {
+                        const action = btn.getAttribute('data-action');
+                        const serverName = btn.getAttribute('data-server');
+                        
+                        console.log(\`Button \${index + 1}: action="\${action}", server="\${serverName}"\`);
+                        
+                        // Remove existing listeners to prevent duplicates
+                        btn.removeEventListener('click', handleButtonClick);
+                        
+                        // Add new listener
+                        btn.addEventListener('click', handleButtonClick);
+                        
+                        function handleButtonClick(e) {
                             e.preventDefault();
                             e.stopPropagation();
                             
-                            const action = btn.getAttribute('data-action');
-                            const serverName = btn.getAttribute('data-server');
-                            
-                            console.log('Button clicked:', action, serverName);
+                            console.log('Button clicked - Action:', action, 'Server:', serverName);
                             
                             if (action === 'delete') {
                                 handleDeleteServer(serverName);
                             } else if (action === 'edit') {
                                 handleEditServer(serverName);
+                            } else {
+                                console.warn('Unknown action:', action);
                             }
-                        });
+                        }
                     });
                 }, 100); // Small delay to ensure DOM is ready
             } else {
@@ -1994,12 +2047,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
 
         function handleDeleteServer(serverName) {
-            if (confirm(\`Are you sure you want to delete the "\${serverName}" MCP server?\`)) {
-                console.log('Deleting server:', serverName);
+            console.log('handleDeleteServer() called with:', serverName);
+            
+            const userConfirmed = confirm(\`Are you sure you want to delete the "\${serverName}" MCP server?\`);
+            console.log('User confirmed deletion:', userConfirmed);
+            
+            if (userConfirmed) {
+                console.log('Sending delete request for server:', serverName);
                 vscode.postMessage({
                     type: 'deleteMCPServer',
                     serverName: serverName
                 });
+            } else {
+                console.log('User cancelled deletion');
             }
         }
 
