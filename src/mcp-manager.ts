@@ -31,10 +31,14 @@ export class MCPManager {
      */
     private loadConfiguration(): void {
         try {
+            console.log('MCPManager.loadConfiguration() - Loading from:', this.configPath);
             if (fs.existsSync(this.configPath)) {
                 const configData = fs.readFileSync(this.configPath, 'utf8');
+                console.log('MCPManager.loadConfiguration() - Raw config data:', configData);
                 this.config = JSON.parse(configData);
+                console.log('MCPManager.loadConfiguration() - Parsed config:', this.config);
             } else {
+                console.log('MCPManager.loadConfiguration() - Config file does not exist, creating default');
                 // Create default config directory
                 const configDir = path.dirname(this.configPath);
                 if (!fs.existsSync(configDir)) {
@@ -46,6 +50,13 @@ export class MCPManager {
             console.error('Failed to load MCP configuration:', error);
             this.config = { mcpServers: {} };
         }
+    }
+
+    /**
+     * Reload configuration from disk
+     */
+    public reloadConfiguration(): void {
+        this.loadConfiguration();
     }
 
     /**
@@ -89,7 +100,11 @@ export class MCPManager {
      * List all configured MCP servers
      */
     public listMCPServers(): MCPServerConfig[] {
-        return Object.values(this.config.mcpServers);
+        console.log('MCPManager.listMCPServers() - Current config:', this.config);
+        console.log('MCPManager.listMCPServers() - Config file path:', this.configPath);
+        const servers = Object.values(this.config.mcpServers);
+        console.log('MCPManager.listMCPServers() - Found servers:', servers);
+        return servers;
     }
 
     /**

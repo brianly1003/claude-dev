@@ -253,6 +253,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             const mcpStatus = this.mcpUITesting.getMCPStatus();
             const detailedServers = this.mcpUITesting.getDetailedMCPServers();
             
+            console.log('ChatViewProvider.sendMCPServerData() - MCP Status:', mcpStatus);
+            console.log('ChatViewProvider.sendMCPServerData() - Detailed Servers:', detailedServers);
+            
             this._view.webview.postMessage({
                 type: 'showMCPModal',
                 data: {

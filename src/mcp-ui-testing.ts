@@ -289,8 +289,14 @@ I can help you run **real browser automation tests** using MCP tools!
      * Get MCP configuration status
      */
     public getMCPStatus(): { configured: boolean; tools: string[]; configPath: string } {
+        // Always reload configuration to get latest state
+        this.mcpManager.reloadConfiguration();
+        
         const allServers = this.mcpManager.listMCPServers();
         const allTools = allServers.map(server => server.name);
+        
+        console.log('MCPUITesting.getMCPStatus() - All servers:', allServers);
+        console.log('MCPUITesting.getMCPStatus() - All tools:', allTools);
         
         return {
             configured: allTools.length > 0,
@@ -303,8 +309,13 @@ I can help you run **real browser automation tests** using MCP tools!
      * Get detailed MCP server configurations for UI display
      */
     public getDetailedMCPServers(): any[] {
+        // Always reload configuration to get latest state
+        this.mcpManager.reloadConfiguration();
+        
         const allServers = this.mcpManager.listMCPServers();
-        return allServers.map(server => ({
+        console.log('MCPUITesting.getDetailedMCPServers() - Raw servers from manager:', allServers);
+        
+        const mappedServers = allServers.map(server => ({
             name: server.name,
             displayName: server.displayName || server.name,
             type: server.type,
@@ -312,5 +323,8 @@ I can help you run **real browser automation tests** using MCP tools!
             args: server.args || [],
             env: server.env || {}
         }));
+        
+        console.log('MCPUITesting.getDetailedMCPServers() - Mapped servers:', mappedServers);
+        return mappedServers;
     }
 }
