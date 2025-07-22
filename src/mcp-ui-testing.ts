@@ -298,4 +298,19 @@ I can help you run **real browser automation tests** using MCP tools!
             configPath: '~/.claude/claude.json'
         };
     }
+
+    /**
+     * Get detailed MCP server configurations for UI display
+     */
+    public getDetailedMCPServers(): any[] {
+        const allServers = this.mcpManager.listMCPServers();
+        return allServers.map(server => ({
+            name: server.name,
+            displayName: server.displayName || server.name,
+            type: server.type,
+            command: server.command,
+            args: server.args || [],
+            env: server.env || {}
+        }));
+    }
 }

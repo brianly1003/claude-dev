@@ -65,6 +65,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'addCustomMCPServer':
                     await this.addCustomMCPServer(data.serverConfig);
                     break;
+                case 'deleteMCPServer':
+                    await this.deleteMCPServer(data.serverName);
+                    break;
+                case 'editMCPServer':
+                    await this.editMCPServer(data.serverName);
+                    break;
             }
         });
     }
@@ -245,11 +251,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private sendMCPServerData() {
         if (this._view) {
             const mcpStatus = this.mcpUITesting.getMCPStatus();
+            const detailedServers = this.mcpUITesting.getDetailedMCPServers();
+            
             this._view.webview.postMessage({
                 type: 'showMCPModal',
                 data: {
                     configured: mcpStatus.configured,
                     tools: mcpStatus.tools,
+                    configuredServers: detailedServers,
                     configPath: mcpStatus.configPath
                 }
             });
@@ -417,6 +426,43 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             this.conversationManager.addMessage('assistant', errorMessage);
             this.updateWebview();
         }
+    }
+
+    private async deleteMCPServer(serverName: string) {
+        try {
+            const { MCPManager } = await import('./mcp-manager');
+            const mcpManager = new MCPManager();
+            
+            // Check if server exists
+            if (!mcpManager.hasMCPServer(serverName)) {
+                throw new Error(`Server "${serverName}" not found`);
+            }
+
+            // Remove the server
+            mcpManager.removeMCPServer(serverName);
+
+            // Send updated status back to UI
+            this.sendMCPServerData();
+
+            // Show success message in chat
+            const successMessage = `✅ Successfully deleted MCP server "${serverName}".`;
+            this.conversationManager.addMessage('assistant', successMessage);
+            this.updateWebview();
+
+        } catch (error) {
+            // Show error message in chat
+            const errorMessage = `❌ Failed to delete MCP server "${serverName}": ${error instanceof Error ? error.message : error}`;
+            this.conversationManager.addMessage('assistant', errorMessage);
+            this.updateWebview();
+        }
+    }
+
+    private async editMCPServer(serverName: string) {
+        // For now, show a message that editing is not yet implemented
+        // In the future, this could open a pre-populated form
+        const message = `ℹ️ Editing MCP servers is not yet implemented. You can delete "${serverName}" and add a new one with updated configuration.`;
+        this.conversationManager.addMessage('assistant', message);
+        this.updateWebview();
     }
 
     private _getHtmlForWebview(_webview: vscode.Webview) {
@@ -945,6 +991,105 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 16px;
             margin-top: 16px;
+        }
+
+        .mcp-configured-servers {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .mcp-configured-server {
+            background: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: var(--border-radius-small);
+            padding: 20px;
+            position: relative;
+        }
+
+        .mcp-configured-server-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .mcp-configured-server-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            margin: 0;
+        }
+
+        .mcp-configured-server-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mcp-configured-action-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--vscode-input-border);
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mcp-configured-action-btn:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        .mcp-configured-action-btn.delete {
+            background: rgba(248, 113, 113, 0.1);
+            color: #DC2626;
+            border-color: #F87171;
+        }
+
+        .mcp-configured-action-btn.delete:hover {
+            background: rgba(248, 113, 113, 0.2);
+        }
+
+        .mcp-connection-type {
+            background: var(--claude-accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .mcp-configured-server-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: var(--vscode-descriptionForeground);
+            font-size: 13px;
+        }
+
+        .mcp-configured-server-detail {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .mcp-configured-server-label {
+            font-weight: 600;
+            min-width: 80px;
+            color: var(--vscode-foreground);
+        }
+
+        .mcp-configured-server-value {
+            font-family: var(--vscode-editor-font-family);
+            background: var(--vscode-textCodeBlock-background);
+            padding: 2px 6px;
+            border-radius: 3px;
+            flex: 1;
         }
 
         .mcp-server-card {
@@ -1633,15 +1778,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             mcpModal.classList.remove('visible');
         }
 
-        function renderPopularServers(configuredTools = []) {
+        function renderPopularServers(configuredTools = [], configuredServers = []) {
             const popularGrid = document.getElementById('popularServers');
             
             popularGrid.innerHTML = popularServers.map(server => {
-                // Check if server is installed (case-insensitive comparison)
+                // Check if server is installed by checking both simple tool names and detailed server configs
                 const isInstalled = configuredTools.some(tool => 
                     tool.toLowerCase().includes(server.name.toLowerCase().replace(/\s+/g, '')) ||
                     tool.toLowerCase().includes(server.name.toLowerCase())
-                );
+                ) || configuredServers.some(configServer => {
+                    const serverKey = server.name.toLowerCase().replace(/\s+/g, '-');
+                    const displayName = configServer.displayName || configServer.name;
+                    return configServer.name === serverKey || 
+                           displayName.toLowerCase() === server.name.toLowerCase();
+                });
                 
                 return \`
                     <div class="mcp-server-card \${isInstalled ? 'installed' : ''}" 
@@ -1712,59 +1862,71 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             const configuredStatus = document.getElementById('configuredStatus');
             const configuredServers = document.getElementById('configuredServers');
             
-            if (data.configured && data.tools.length > 0) {
-                configuredStatus.textContent = \`\${data.tools.length} configured\`;
+            if (data.configured && data.configuredServers && data.configuredServers.length > 0) {
+                configuredStatus.textContent = \`\${data.configuredServers.length} configured\`;
                 configuredStatus.classList.add('configured');
                 
                 configuredServers.innerHTML = \`
-                    <div class="mcp-servers-grid">
-                        \${data.tools.map(tool => {
-                            // Determine icon and description based on server name
-                            let icon = '🔧';
-                            let description = 'Custom MCP server';
-                            
-                            // Match popular servers by name
-                            if (tool.toLowerCase().includes('context')) {
-                                icon = '📖';
-                                description = 'Up-to-date Code Docs For Any Project';
-                            } else if (tool.toLowerCase().includes('sequential')) {
-                                icon = '🧠';
-                                description = 'Step-by-step reasoning capabilities';
-                            } else if (tool.toLowerCase().includes('memory')) {
-                                icon = '🧠';
-                                description = 'Knowledge graph storage';
-                            } else if (tool.toLowerCase().includes('puppeteer')) {
-                                icon = '🎭';
-                                description = 'Browser automation';
-                            } else if (tool.toLowerCase().includes('fetch')) {
-                                icon = '🌐';
-                                description = 'HTTP requests & web scraping';
-                            } else if (tool.toLowerCase().includes('filesystem')) {
-                                icon = '📁';
-                                description = 'File operations & management';
-                            } else if (tool.toLowerCase().includes('playwright')) {
-                                icon = '🎭';
-                                description = 'Playwright browser automation';
-                            }
+                    <div class="mcp-configured-servers">
+                        \${data.configuredServers.map(server => {
+                            const displayName = server.displayName || server.name;
+                            const args = server.args ? server.args.join(' ') : '';
                             
                             return \`
-                                <div class="mcp-server-card installed">
-                                    <div class="mcp-server-icon">\${icon}</div>
-                                    <div class="mcp-server-name">\${tool}</div>
-                                    <div class="mcp-server-description">\${description}</div>
-                                    <div class="mcp-install-status installed">Active</div>
+                                <div class="mcp-configured-server">
+                                    <div class="mcp-configured-server-header">
+                                        <h3 class="mcp-configured-server-name">\${displayName.toLowerCase()}</h3>
+                                        <div class="mcp-configured-server-actions">
+                                            <button class="mcp-configured-action-btn" data-action="edit" data-server="\${server.name}">Edit</button>
+                                            <button class="mcp-configured-action-btn delete" data-action="delete" data-server="\${server.name}">Delete</button>
+                                        </div>
+                                    </div>
+                                    <div class="mcp-connection-type">\${server.type.toUpperCase()}</div>
+                                    <div class="mcp-configured-server-details">
+                                        <div class="mcp-configured-server-detail">
+                                            <span class="mcp-configured-server-label">Command:</span>
+                                            <span class="mcp-configured-server-value">\${server.command}</span>
+                                        </div>
+                                        \${args ? \`
+                                            <div class="mcp-configured-server-detail">
+                                                <span class="mcp-configured-server-label">Args:</span>
+                                                <span class="mcp-configured-server-value">\${args}</span>
+                                            </div>
+                                        \` : ''}
+                                        \${server.env && Object.keys(server.env).length > 0 ? \`
+                                            <div class="mcp-configured-server-detail">
+                                                <span class="mcp-configured-server-label">Environment:</span>
+                                                <span class="mcp-configured-server-value">\${Object.keys(server.env).length} variables</span>
+                                            </div>
+                                        \` : ''}
+                                    </div>
                                 </div>
                             \`;
                         }).join('')}
                     </div>
                 \`;
+
+                // Add event listeners for Edit/Delete buttons
+                configuredServers.querySelectorAll('.mcp-configured-action-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const action = btn.getAttribute('data-action');
+                        const serverName = btn.getAttribute('data-server');
+                        
+                        if (action === 'delete') {
+                            handleDeleteServer(serverName);
+                        } else if (action === 'edit') {
+                            handleEditServer(serverName);
+                        }
+                    });
+                });
             } else {
                 configuredStatus.textContent = '0 configured';
                 configuredStatus.classList.remove('configured');
                 configuredServers.innerHTML = '<div class="mcp-no-servers">No MCP servers configured</div>';
             }
             
-            renderPopularServers(data.tools);
+            renderPopularServers(data.tools, data.configuredServers || []);
             mcpModal.classList.add('visible');
         }
 
@@ -1812,6 +1974,24 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 // Show error in form
                 showFormError(data.error || 'Failed to add MCP server. Please check your configuration.');
             }
+        }
+
+        function handleDeleteServer(serverName) {
+            if (confirm(\`Are you sure you want to delete the "\${serverName}" MCP server?\`)) {
+                vscode.postMessage({
+                    type: 'deleteMCPServer',
+                    serverName: serverName
+                });
+            }
+        }
+
+        function handleEditServer(serverName) {
+            // For now, just show a message that editing is not implemented
+            // In the future, this could open the custom server form pre-populated
+            vscode.postMessage({
+                type: 'editMCPServer', 
+                serverName: serverName
+            });
         }
 
         function sendMessage() {
