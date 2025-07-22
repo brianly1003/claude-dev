@@ -289,10 +289,12 @@ I can help you run **real browser automation tests** using MCP tools!
      * Get MCP configuration status
      */
     public getMCPStatus(): { configured: boolean; tools: string[]; configPath: string } {
-        const tools = this.mcpManager.getUITestingTools();
+        const allServers = this.mcpManager.listMCPServers();
+        const allTools = allServers.map(server => server.name);
+        
         return {
-            configured: tools.length > 0,
-            tools: tools,
+            configured: allTools.length > 0,
+            tools: allTools,
             configPath: '~/.claude/claude.json'
         };
     }

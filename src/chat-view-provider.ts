@@ -62,6 +62,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'installMCPServer':
                     await this.installMCPServer(data.serverName);
                     break;
+                case 'addCustomMCPServer':
+                    await this.addCustomMCPServer(data.serverConfig);
+                    break;
             }
         });
     }
@@ -269,6 +272,69 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             // Show error message in chat
             const errorMessage = `❌ Failed to install ${serverName}: ${error}`;
+            this.conversationManager.addMessage('assistant', errorMessage);
+            this.updateWebview();
+        }
+    }
+
+    private async addCustomMCPServer(serverConfig: any) {
+        try {
+            // Validate server configuration
+            if (!serverConfig.name || !serverConfig.command) {
+                throw new Error('Server name and command are required');
+            }
+
+            // Check if server name already exists
+            const existingServers = await this.mcpUITesting.getMCPStatus();
+            if (existingServers.tools.some(tool => tool.toLowerCase() === serverConfig.name.toLowerCase())) {
+                throw new Error(`Server with name "${serverConfig.name}" already exists`);
+            }
+
+            // Add server via MCP manager
+            const { MCPManager } = await import('./mcp-manager');
+            const mcpManager = new MCPManager();
+            
+            mcpManager.addMCPServer(serverConfig.name, {
+                type: serverConfig.type,
+                command: serverConfig.command,
+                args: serverConfig.args || [],
+                ...(serverConfig.env && { env: serverConfig.env })
+            });
+
+            // Send success result back to UI
+            if (this._view) {
+                this._view.webview.postMessage({
+                    type: 'customServerResult',
+                    data: { success: true }
+                });
+            }
+
+            // Show success message in chat
+            const successMessage = `✅ Successfully added custom MCP server "${serverConfig.name}"!\n\n` +
+                `**Configuration:**\n` +
+                `- Command: \`${serverConfig.command}\`\n` +
+                `- Arguments: ${serverConfig.args?.length ? `\`${serverConfig.args.join(' ')}\`` : 'None'}\n` +
+                `- Type: ${serverConfig.type}\n` +
+                `${Object.keys(serverConfig.env || {}).length > 0 ? `- Environment: ${Object.keys(serverConfig.env).length} variables` : ''}\n\n` +
+                `The server has been saved to your Claude configuration and is ready to use!`;
+            
+            this.conversationManager.addMessage('assistant', successMessage);
+            this.updateWebview();
+
+        } catch (error) {
+            // Send error result back to UI
+            if (this._view) {
+                this._view.webview.postMessage({
+                    type: 'customServerResult',
+                    data: { 
+                        success: false, 
+                        error: error instanceof Error ? error.message : 'Unknown error occurred'
+                    }
+                });
+            }
+
+            // Show error message in chat
+            const errorMessage = `❌ Failed to add custom MCP server: ${error instanceof Error ? error.message : error}`;
             this.conversationManager.addMessage('assistant', errorMessage);
             this.updateWebview();
         }
@@ -876,6 +942,197 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             padding: 40px 20px;
         }
 
+        /* Custom MCP Server Form Styles */
+        .mcp-form-modal {
+            max-width: 500px;
+            width: 95%;
+        }
+
+        .mcp-server-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .mcp-form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mcp-form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .mcp-required {
+            color: #F87171;
+            font-weight: 500;
+        }
+
+        .mcp-form-input, .mcp-form-select, .mcp-form-textarea {
+            background: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            color: var(--vscode-input-foreground);
+            border-radius: var(--border-radius-small);
+            padding: 12px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .mcp-form-input:focus, .mcp-form-select:focus, .mcp-form-textarea:focus {
+            border-color: var(--claude-accent);
+            box-shadow: 0 0 0 2px var(--claude-accent-light);
+        }
+
+        .mcp-form-input::placeholder, .mcp-form-textarea::placeholder {
+            color: var(--vscode-input-placeholderForeground);
+        }
+
+        .mcp-form-help {
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+            line-height: 1.4;
+            margin-top: -4px;
+        }
+
+        .mcp-form-select {
+            cursor: pointer;
+        }
+
+        .mcp-form-textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: var(--vscode-editor-font-family);
+        }
+
+        .mcp-advanced-section {
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: var(--border-radius-small);
+            overflow: hidden;
+        }
+
+        .mcp-advanced-toggle {
+            width: 100%;
+            background: var(--vscode-button-secondaryBackground);
+            border: none;
+            padding: 12px 16px;
+            color: var(--vscode-button-secondaryForeground);
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mcp-advanced-toggle:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        .mcp-chevron {
+            transition: transform 0.2s ease;
+        }
+
+        .mcp-advanced-section.expanded .mcp-chevron {
+            transform: rotate(90deg);
+        }
+
+        .mcp-advanced-content {
+            display: none;
+            padding: 16px;
+            background: var(--vscode-editor-background);
+            border-top: 1px solid var(--vscode-panel-border);
+        }
+
+        .mcp-advanced-section.expanded .mcp-advanced-content {
+            display: block;
+            animation: expandDown 0.2s ease;
+        }
+
+        @keyframes expandDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mcp-form-error {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid #F87171;
+            color: #DC2626;
+            border-radius: var(--border-radius-small);
+            padding: 12px;
+            font-size: 13px;
+            margin-top: -8px;
+        }
+
+        .mcp-form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 8px;
+            padding-top: 20px;
+            border-top: 1px solid var(--vscode-panel-border);
+        }
+
+        .mcp-btn-secondary, .mcp-btn-primary {
+            padding: 10px 20px;
+            border-radius: var(--border-radius-small);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 100px;
+            justify-content: center;
+        }
+
+        .mcp-btn-secondary {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border-color: var(--vscode-input-border);
+        }
+
+        .mcp-btn-secondary:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        .mcp-btn-primary {
+            background: var(--claude-gradient);
+            color: white;
+            box-shadow: var(--claude-shadow);
+        }
+
+        .mcp-btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 25px rgba(255, 107, 53, 0.25);
+        }
+
+        .mcp-btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .mcp-btn-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
         .typing-indicator {
             display: flex;
             align-items: center;
@@ -996,6 +1253,93 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         </div>
     </div>
 
+    <!-- Custom MCP Server Form Modal -->
+    <div class="mcp-modal-overlay" id="customServerModalOverlay">
+        <div class="mcp-modal mcp-form-modal">
+            <div class="mcp-modal-header">
+                <h2 class="mcp-modal-title">Add Custom MCP Server</h2>
+                <button class="mcp-close-button" id="customServerCloseBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.3 5.71c-.39-.39-1.02-.39-1.41 0L12 10.59 7.11 5.7c-.39-.39-1.02-.39-1.41 0s-.39 1.02 0 1.41L10.59 12 5.7 16.89c-.39.39-.39 1.02 0 1.41s1.02.39 1.41 0L12 13.41l4.89 4.88c.39.39 1.02.39 1.41 0s.39-1.02 0-1.41L13.41 12l4.88-4.89c.39-.39.39-1.02.01-1.4z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="mcp-modal-content">
+                <form class="mcp-server-form" id="customServerForm">
+                    <div class="mcp-form-row">
+                        <label class="mcp-form-label" for="serverName">
+                            Server Name <span class="mcp-required">*</span>
+                        </label>
+                        <input type="text" id="serverName" name="serverName" class="mcp-form-input" 
+                               placeholder="e.g., my-custom-server" required>
+                        <div class="mcp-form-help">Unique identifier for your MCP server</div>
+                    </div>
+
+                    <div class="mcp-form-row">
+                        <label class="mcp-form-label" for="serverCommand">
+                            Command <span class="mcp-required">*</span>
+                        </label>
+                        <input type="text" id="serverCommand" name="serverCommand" class="mcp-form-input" 
+                               placeholder="e.g., npx, python, node" required>
+                        <div class="mcp-form-help">Executable command to run the MCP server</div>
+                    </div>
+
+                    <div class="mcp-form-row">
+                        <label class="mcp-form-label" for="serverArgs">
+                            Arguments
+                        </label>
+                        <input type="text" id="serverArgs" name="serverArgs" class="mcp-form-input" 
+                               placeholder="e.g., @my/mcp-server --port 3000">
+                        <div class="mcp-form-help">Space-separated command line arguments</div>
+                    </div>
+
+                    <div class="mcp-form-row">
+                        <label class="mcp-form-label" for="serverType">
+                            Connection Type <span class="mcp-required">*</span>
+                        </label>
+                        <select id="serverType" name="serverType" class="mcp-form-select" required>
+                            <option value="stdio">Standard I/O (stdio)</option>
+                            <option value="sse">Server-Sent Events (sse)</option>
+                        </select>
+                        <div class="mcp-form-help">How the MCP client connects to the server</div>
+                    </div>
+
+                    <div class="mcp-form-row mcp-advanced-section">
+                        <button type="button" class="mcp-advanced-toggle" id="advancedToggle">
+                            <svg class="mcp-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8.59 16.58L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.42z"/>
+                            </svg>
+                            Advanced Configuration
+                        </button>
+                        <div class="mcp-advanced-content" id="advancedContent">
+                            <div class="mcp-form-row">
+                                <label class="mcp-form-label" for="serverEnv">Environment Variables</label>
+                                <textarea id="serverEnv" name="serverEnv" class="mcp-form-textarea" rows="4"
+                                          placeholder="KEY1=value1&#10;KEY2=value2&#10;API_TOKEN=your-token"></textarea>
+                                <div class="mcp-form-help">One environment variable per line (KEY=value format)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mcp-form-error" id="formError" style="display: none;"></div>
+
+                    <div class="mcp-form-actions">
+                        <button type="button" class="mcp-btn-secondary" id="cancelCustomServer">Cancel</button>
+                        <button type="submit" class="mcp-btn-primary" id="saveCustomServer">
+                            <span class="mcp-btn-text">Add Server</span>
+                            <div class="mcp-btn-spinner" style="display: none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M12,4a8,8,0,0,1,7.89,6.7A1.53,1.53,0,0,0,21.38,12h0a1.5,1.5,0,0,0,1.48-1.75,11,11,0,0,0-21.72,0A1.5,1.5,0,0,0,2.62,12h0a1.53,1.53,0,0,0,1.49-1.3A8,8,0,0,1,12,4Z" fill="currentColor"/>
+                                    <animateTransform attributeName="transform" dur="0.75s" values="0 12 12;360 12 12" repeatCount="indefinite" type="rotate"/>
+                                </svg>
+                            </div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         const vscode = acquireVsCodeApi();
         const messagesContainer = document.getElementById('messages');
@@ -1004,6 +1348,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         const mcpModal = document.getElementById('mcpModalOverlay');
         const mcpServerBtn = document.getElementById('mcpServerBtn');
         const mcpCloseBtn = document.getElementById('mcpCloseBtn');
+        const customServerModal = document.getElementById('customServerModalOverlay');
+        const addServerBtn = document.getElementById('addServerBtn');
+        const customServerCloseBtn = document.getElementById('customServerCloseBtn');
+        const customServerForm = document.getElementById('customServerForm');
+        const advancedToggle = document.getElementById('advancedToggle');
+        const cancelCustomServer = document.getElementById('cancelCustomServer');
         let isWaiting = false;
 
         // Popular MCP servers data
@@ -1045,6 +1395,144 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 category: 'files'
             }
         ];
+
+        // Custom Server Form Functions
+        function showCustomServerForm() {
+            hideMCPModal();
+            resetCustomServerForm();
+            customServerModal.classList.add('visible');
+        }
+
+        function hideCustomServerForm() {
+            customServerModal.classList.remove('visible');
+        }
+
+        function resetCustomServerForm() {
+            customServerForm.reset();
+            hideFormError();
+            setSubmitButtonState(false);
+            
+            // Reset advanced section
+            const advancedSection = document.querySelector('.mcp-advanced-section');
+            advancedSection.classList.remove('expanded');
+        }
+
+        function toggleAdvancedConfig() {
+            const advancedSection = document.querySelector('.mcp-advanced-section');
+            advancedSection.classList.toggle('expanded');
+        }
+
+        function showFormError(message) {
+            const errorDiv = document.getElementById('formError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideFormError() {
+            const errorDiv = document.getElementById('formError');
+            errorDiv.style.display = 'none';
+        }
+
+        function setSubmitButtonState(loading) {
+            const submitBtn = document.getElementById('saveCustomServer');
+            const btnText = submitBtn.querySelector('.mcp-btn-text');
+            const btnSpinner = submitBtn.querySelector('.mcp-btn-spinner');
+            
+            submitBtn.disabled = loading;
+            btnText.style.display = loading ? 'none' : 'block';
+            btnSpinner.style.display = loading ? 'block' : 'none';
+        }
+
+        function validateServerForm(formData) {
+            const errors = [];
+            
+            // Validate required fields
+            if (!formData.name?.trim()) {
+                errors.push('Server name is required');
+            } else if (!/^[a-zA-Z0-9_-]+$/.test(formData.name.trim())) {
+                errors.push('Server name can only contain letters, numbers, hyphens, and underscores');
+            }
+            
+            if (!formData.command?.trim()) {
+                errors.push('Command is required');
+            }
+            
+            if (!formData.type) {
+                errors.push('Connection type is required');
+            }
+            
+            // Validate environment variables format if provided
+            if (formData.env?.trim()) {
+                const envLines = formData.env.split('\\n').filter(line => line.trim());
+                for (const line of envLines) {
+                    if (!line.includes('=') || line.startsWith('=')) {
+                        errors.push('Environment variables must be in KEY=value format');
+                        break;
+                    }
+                }
+            }
+            
+            return errors;
+        }
+
+        function parseEnvironmentVariables(envText) {
+            if (!envText?.trim()) return {};
+            
+            const env = {};
+            const lines = envText.split('\\n').filter(line => line.trim());
+            
+            for (const line of lines) {
+                const [key, ...valueParts] = line.split('=');
+                if (key?.trim() && valueParts.length > 0) {
+                    env[key.trim()] = valueParts.join('=');
+                }
+            }
+            
+            return env;
+        }
+
+        function handleCustomServerSubmit(event) {
+            event.preventDefault();
+            hideFormError();
+            
+            // Get form data
+            const formData = {
+                name: document.getElementById('serverName').value.trim(),
+                command: document.getElementById('serverCommand').value.trim(),
+                args: document.getElementById('serverArgs').value.trim(),
+                type: document.getElementById('serverType').value,
+                env: document.getElementById('serverEnv').value.trim()
+            };
+            
+            // Validate form
+            const errors = validateServerForm(formData);
+            if (errors.length > 0) {
+                showFormError(errors[0]);
+                return;
+            }
+            
+            // Parse arguments and environment variables
+            const args = formData.args ? formData.args.split(/\\s+/).filter(arg => arg) : [];
+            const env = parseEnvironmentVariables(formData.env);
+            
+            // Prepare server configuration
+            const serverConfig = {
+                name: formData.name,
+                command: formData.command,
+                args: args,
+                type: formData.type,
+                ...(Object.keys(env).length > 0 && { env })
+            };
+            
+            // Show loading state
+            setSubmitButtonState(true);
+            
+            // Send to backend
+            vscode.postMessage({
+                type: 'addCustomMCPServer',
+                serverConfig: serverConfig
+            });
+        }
 
         // MCP Modal Functions
         function showMCPModal() {
@@ -1095,14 +1583,34 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 
                 configuredServers.innerHTML = \`
                     <div class="mcp-servers-grid">
-                        \${data.tools.map(tool => \`
-                            <div class="mcp-server-card installed">
-                                <div class="mcp-server-icon">🎭</div>
-                                <div class="mcp-server-name">\${tool}</div>
-                                <div class="mcp-server-description">Browser automation tool</div>
-                                <div class="mcp-install-status installed">Active</div>
-                            </div>
-                        \`).join('')}
+                        \${data.tools.map(tool => {
+                            // Determine icon and description based on server name
+                            let icon = '🔧';
+                            let description = 'Custom MCP server';
+                            
+                            if (tool.toLowerCase().includes('playwright')) {
+                                icon = '🎭';
+                                description = 'Playwright browser automation';
+                            } else if (tool.toLowerCase().includes('puppeteer')) {
+                                icon = '🎭';
+                                description = 'Puppeteer browser automation';
+                            } else if (tool.toLowerCase().includes('fetch')) {
+                                icon = '🌐';
+                                description = 'HTTP requests & web scraping';
+                            } else if (tool.toLowerCase().includes('filesystem')) {
+                                icon = '📁';
+                                description = 'File operations & management';
+                            }
+                            
+                            return \`
+                                <div class="mcp-server-card installed">
+                                    <div class="mcp-server-icon">\${icon}</div>
+                                    <div class="mcp-server-name">\${tool}</div>
+                                    <div class="mcp-server-description">\${description}</div>
+                                    <div class="mcp-install-status installed">Active</div>
+                                </div>
+                            \`;
+                        }).join('')}
                     </div>
                 \`;
             } else {
@@ -1124,6 +1632,42 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 hideMCPModal();
             }
         });
+
+        // Custom Server Form Event Listeners
+        addServerBtn.addEventListener('click', showCustomServerForm);
+        customServerCloseBtn.addEventListener('click', hideCustomServerForm);
+        cancelCustomServer.addEventListener('click', hideCustomServerForm);
+        advancedToggle.addEventListener('click', toggleAdvancedConfig);
+        customServerForm.addEventListener('submit', handleCustomServerSubmit);
+        
+        customServerModal.addEventListener('click', (e) => {
+            if (e.target === customServerModal) {
+                hideCustomServerForm();
+            }
+        });
+
+        // Real-time form validation
+        document.getElementById('serverName').addEventListener('input', hideFormError);
+        document.getElementById('serverCommand').addEventListener('input', hideFormError);
+
+        function handleCustomServerResult(data) {
+            setSubmitButtonState(false);
+            
+            if (data.success) {
+                // Success - hide form and update main modal
+                hideCustomServerForm();
+                
+                // Refresh MCP modal with updated data
+                showMCPModal();
+                
+                // Show success message in chat
+                // (This will be handled by the backend sending a chat message)
+                
+            } else {
+                // Show error in form
+                showFormError(data.error || 'Failed to add MCP server. Please check your configuration.');
+            }
+        }
 
         function sendMessage() {
             const message = messageInput.value.trim();
@@ -1309,6 +1853,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'showMCPModal':
                     updateMCPModal(message.data);
+                    break;
+                case 'customServerResult':
+                    handleCustomServerResult(message.data);
                     break;
             }
         });
