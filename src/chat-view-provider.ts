@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import { ClaudeCodeService, CompletionRequest, StreamingCompletionOptions } from './claude-code-service';
 import { ConversationManager } from './conversation-manager';
+import { MCPUITesting } from './mcp-ui-testing';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'claudeDevChat';
     private _view?: vscode.WebviewView;
     private claudeCodeService: ClaudeCodeService;
     private conversationManager: ConversationManager;
+    private mcpUITesting: MCPUITesting;
     private streamingMessageId: string | null = null;
 
     constructor(
@@ -16,6 +18,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     ) {
         this.claudeCodeService = claudeCodeService;
         this.conversationManager = new ConversationManager(context);
+        this.mcpUITesting = new MCPUITesting(claudeCodeService);
         this.loadMostRecentConversation();
     }
 
@@ -53,6 +56,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'clearChat':
                     this.clearChat();
                     break;
+                case 'openMCPModal':
+                    this.sendMCPServerData();
+                    break;
+                case 'installMCPServer':
+                    await this.installMCPServer(data.serverName);
+                    break;
             }
         });
     }
@@ -65,6 +74,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         // Add user message to conversation and auto-save
         this.conversationManager.addMessage('user', message.trim());
         this.updateWebview();
+
+        // Check if this is an MCP UI testing request (priority over basic UI testing)
+        if (message.toLowerCase().includes('mcp') || 
+            message.toLowerCase().includes('configure mcp') ||
+            message.toLowerCase().includes('list mcp') ||
+            message.toLowerCase().includes('ui test') || 
+            message.toLowerCase().includes('test ui') || 
+            message.toLowerCase().includes('playwright') || 
+            message.toLowerCase().includes('browser test') ||
+            message.toLowerCase().includes('create test')) {
+            
+            // Handle MCP UI testing with real browser automation
+            const mcpResponse = await this.mcpUITesting.handleUITestingChat(message);
+            this.conversationManager.addMessage('assistant', mcpResponse);
+            this.updateWebview();
+            return;
+        }
 
         // Create a streaming assistant message placeholder
         const streamingMessage = this.conversationManager.addMessage('assistant', '...');
@@ -213,6 +239,41 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    private sendMCPServerData() {
+        if (this._view) {
+            const mcpStatus = this.mcpUITesting.getMCPStatus();
+            this._view.webview.postMessage({
+                type: 'showMCPModal',
+                data: {
+                    configured: mcpStatus.configured,
+                    tools: mcpStatus.tools,
+                    configPath: mcpStatus.configPath
+                }
+            });
+        }
+    }
+
+    private async installMCPServer(serverName: string) {
+        try {
+            // Auto-configure MCP for the selected server
+            await this.mcpUITesting.autoConfigureMCP();
+            
+            // Send updated status back to UI
+            this.sendMCPServerData();
+            
+            // Show success message in chat
+            const successMessage = `✅ Successfully installed ${serverName} MCP server! You can now use browser automation tools.`;
+            this.conversationManager.addMessage('assistant', successMessage);
+            this.updateWebview();
+            
+        } catch (error) {
+            // Show error message in chat
+            const errorMessage = `❌ Failed to install ${serverName}: ${error}`;
+            this.conversationManager.addMessage('assistant', errorMessage);
+            this.updateWebview();
+        }
+    }
+
     private _getHtmlForWebview(_webview: vscode.Webview) {
         return `<!DOCTYPE html>
 <html lang="en">
@@ -288,6 +349,25 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             background: #4ADE80;
             border-radius: 50%;
             animation: pulse 2s infinite;
+        }
+
+        .mcp-header-btn {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mcp-header-btn:hover {
+            background: var(--claude-accent);
+            color: white;
+            transform: scale(1.05);
         }
 
         @keyframes pulse {
@@ -596,6 +676,206 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             font-size: 12px;
         }
 
+        /* MCP Modal Styles */
+        .mcp-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .mcp-modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .mcp-modal {
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.95) translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        .mcp-modal-overlay.visible .mcp-modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .mcp-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .mcp-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            margin: 0;
+        }
+
+        .mcp-close-button {
+            background: none;
+            border: none;
+            color: var(--vscode-descriptionForeground);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .mcp-close-button:hover {
+            background: var(--vscode-button-secondaryBackground);
+        }
+
+        .mcp-modal-content {
+            padding: 24px;
+        }
+
+        .mcp-section {
+            margin-bottom: 32px;
+        }
+
+        .mcp-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mcp-section-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+
+        .mcp-section-status.configured {
+            background: #4ADE80;
+            color: #064e3b;
+        }
+
+        .mcp-add-server-btn {
+            background: var(--claude-gradient);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--border-radius-small);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-bottom: 24px;
+        }
+
+        .mcp-add-server-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+        }
+
+        .mcp-servers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .mcp-server-card {
+            background: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: var(--border-radius-small);
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .mcp-server-card:hover {
+            border-color: var(--claude-accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .mcp-server-card.installed {
+            background: var(--claude-accent-light);
+            border-color: var(--claude-accent);
+        }
+
+        .mcp-server-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--border-radius-small);
+            background: var(--claude-gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        .mcp-server-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            margin-bottom: 8px;
+        }
+
+        .mcp-server-description {
+            font-size: 13px;
+            color: var(--vscode-descriptionForeground);
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+
+        .mcp-install-status {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+
+        .mcp-install-status.installed {
+            background: #4ADE80;
+            color: #064e3b;
+        }
+
+        .mcp-no-servers {
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+            padding: 40px 20px;
+        }
+
         .typing-indicator {
             display: flex;
             align-items: center;
@@ -639,13 +919,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             <span>Claude Dev</span>
             <div class="status-indicator"></div>
         </div>
+        <button class="mcp-header-btn" id="mcpServerBtn" title="MCP Servers">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+        </button>
     </div>
 
     <div class="chat-container">
         <div class="messages" id="messages">
             <div class="empty-state">
                 <div class="empty-state-logo">C</div>
-                <h2>Claude Dev Assistant</h2>
+                <h2>Brian Dev Assistant</h2>
                 <p>Your AI-powered coding companion</p>
                 <p>I can explore your codebase, explain complex logic, implement features, and help debug issues.</p>
                 
@@ -676,12 +961,169 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         </div>
     </div>
 
+    <!-- MCP Modal -->
+    <div class="mcp-modal-overlay" id="mcpModalOverlay">
+        <div class="mcp-modal">
+            <div class="mcp-modal-header">
+                <h2 class="mcp-modal-title">MCP Servers</h2>
+                <button class="mcp-close-button" id="mcpCloseBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.3 5.71c-.39-.39-1.02-.39-1.41 0L12 10.59 7.11 5.7c-.39-.39-1.02-.39-1.41 0s-.39 1.02 0 1.41L10.59 12 5.7 16.89c-.39.39-.39 1.02 0 1.41s1.02.39 1.41 0L12 13.41l4.89 4.88c.39.39 1.02.39 1.41 0s.39-1.02 0-1.41L13.41 12l4.88-4.89c.39-.39.39-1.02.01-1.4z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="mcp-modal-content">
+                <div class="mcp-section">
+                    <div class="mcp-section-title">
+                        Configured Servers
+                        <span class="mcp-section-status" id="configuredStatus">0 configured</span>
+                    </div>
+                    <div id="configuredServers" class="mcp-no-servers">
+                        No MCP servers configured
+                    </div>
+                    <button class="mcp-add-server-btn" id="addServerBtn">
+                        + Add MCP Server
+                    </button>
+                </div>
+                
+                <div class="mcp-section">
+                    <div class="mcp-section-title">Popular MCP Servers</div>
+                    <div class="mcp-servers-grid" id="popularServers">
+                        <!-- Popular servers will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const vscode = acquireVsCodeApi();
         const messagesContainer = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+        const mcpModal = document.getElementById('mcpModalOverlay');
+        const mcpServerBtn = document.getElementById('mcpServerBtn');
+        const mcpCloseBtn = document.getElementById('mcpCloseBtn');
         let isWaiting = false;
+
+        // Popular MCP servers data
+        const popularServers = [
+            {
+                name: 'Context7',
+                icon: '📖',
+                description: 'Up-to-date Code Docs For Any Project',
+                category: 'documentation'
+            },
+            {
+                name: 'Sequential Thinking',
+                icon: '🧠',
+                description: 'Step-by-step reasoning capabilities',
+                category: 'reasoning'
+            },
+            {
+                name: 'Memory',
+                icon: '🧠',
+                description: 'Knowledge graph storage',
+                category: 'storage'
+            },
+            {
+                name: 'Puppeteer',
+                icon: '🎭',
+                description: 'Browser automation',
+                category: 'automation'
+            },
+            {
+                name: 'Fetch',
+                icon: '🌐',
+                description: 'HTTP requests & web scraping',
+                category: 'networking'
+            },
+            {
+                name: 'Filesystem',
+                icon: '📁',
+                description: 'File operations & management',
+                category: 'files'
+            }
+        ];
+
+        // MCP Modal Functions
+        function showMCPModal() {
+            vscode.postMessage({ type: 'openMCPModal' });
+        }
+
+        function hideMCPModal() {
+            mcpModal.classList.remove('visible');
+        }
+
+        function renderPopularServers(configuredTools = []) {
+            const popularGrid = document.getElementById('popularServers');
+            
+            popularGrid.innerHTML = popularServers.map(server => {
+                const isInstalled = configuredTools.includes(server.name.toLowerCase()) || 
+                                  (server.name === 'Puppeteer' && configuredTools.length > 0);
+                
+                return \`
+                    <div class="mcp-server-card \${isInstalled ? 'installed' : ''}" 
+                         data-server="\${server.name}"
+                         onclick="\${isInstalled ? '' : 'installMCPServer(\\"' + server.name + '\\")'}" 
+                         style="\${isInstalled ? 'cursor: default;' : ''}">
+                        <div class="mcp-install-status \${isInstalled ? 'installed' : ''}">
+                            \${isInstalled ? 'Installed' : 'Install'}
+                        </div>
+                        <div class="mcp-server-icon">\${server.icon}</div>
+                        <div class="mcp-server-name">\${server.name}</div>
+                        <div class="mcp-server-description">\${server.description}</div>
+                    </div>
+                \`;
+            }).join('');
+        }
+
+        function installMCPServer(serverName) {
+            vscode.postMessage({ 
+                type: 'installMCPServer', 
+                serverName: serverName 
+            });
+        }
+
+        function updateMCPModal(data) {
+            const configuredStatus = document.getElementById('configuredStatus');
+            const configuredServers = document.getElementById('configuredServers');
+            
+            if (data.configured && data.tools.length > 0) {
+                configuredStatus.textContent = \`\${data.tools.length} configured\`;
+                configuredStatus.classList.add('configured');
+                
+                configuredServers.innerHTML = \`
+                    <div class="mcp-servers-grid">
+                        \${data.tools.map(tool => \`
+                            <div class="mcp-server-card installed">
+                                <div class="mcp-server-icon">🎭</div>
+                                <div class="mcp-server-name">\${tool}</div>
+                                <div class="mcp-server-description">Browser automation tool</div>
+                                <div class="mcp-install-status installed">Active</div>
+                            </div>
+                        \`).join('')}
+                    </div>
+                \`;
+            } else {
+                configuredStatus.textContent = '0 configured';
+                configuredStatus.classList.remove('configured');
+                configuredServers.innerHTML = '<div class="mcp-no-servers">No MCP servers configured</div>';
+            }
+            
+            renderPopularServers(data.tools);
+            mcpModal.classList.add('visible');
+        }
+
+        // Event Listeners
+        mcpServerBtn.addEventListener('click', showMCPModal);
+        mcpCloseBtn.addEventListener('click', hideMCPModal);
+        
+        mcpModal.addEventListener('click', (e) => {
+            if (e.target === mcpModal) {
+                hideMCPModal();
+            }
+        });
 
         function sendMessage() {
             const message = messageInput.value.trim();
@@ -736,7 +1178,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 messagesContainer.innerHTML = \`
                     <div class="empty-state">
                         <div class="empty-state-logo">C</div>
-                        <h2>Claude Dev Assistant</h2>
+                        <h2>Brian Dev Assistant</h2>
                         <p>Your AI-powered coding companion</p>
                         <p>I can explore your codebase, explain complex logic, implement features, and help debug issues.</p>
                         
@@ -864,6 +1306,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         isWaiting = false;
                         sendButton.disabled = false;
                     }
+                    break;
+                case 'showMCPModal':
+                    updateMCPModal(message.data);
                     break;
             }
         });

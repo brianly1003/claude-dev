@@ -81,6 +81,18 @@
         "title": "Clear Chat",
         "category": "Claude Dev",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "claudeDev.configureMCP",
+        "title": "Configure MCP for UI Testing",
+        "category": "Claude Dev",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "claudeDev.openMCPModal",
+        "title": "Open MCP Servers",
+        "category": "Claude Dev",
+        "icon": "$(server-process)"
       }
     ],
     "keybindings": [
@@ -121,6 +133,9 @@
         },
         {
           "command": "claudeDev.clearChat"
+        },
+        {
+          "command": "claudeDev.openMCPModal"
         }
       ]
     }
@@ -131,7 +146,8 @@
     "watch": "tsc -watch -p ./"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "latest"
+    "@anthropic-ai/claude-code": "latest",
+    "playwright": "^1.40.0"
   },
   "devDependencies": {
     "@types/node": "^16.x",

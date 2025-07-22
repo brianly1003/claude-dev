@@ -103,11 +103,28 @@ function registerCommands(context: vscode.ExtensionContext) {
         }
     });
 
+    const configureMCPCommand = vscode.commands.registerCommand('claudeDev.configureMCP', () => {
+        if (chatViewProvider) {
+            // Trigger MCP configuration through chat
+            vscode.commands.executeCommand('claudeDevChat.focus');
+            vscode.window.showInformationMessage('Type "Configure MCP for UI testing" in the Claude Dev chat to set up browser automation.');
+        }
+    });
+
+    const openMCPModalCommand = vscode.commands.registerCommand('claudeDev.openMCPModal', () => {
+        if (chatViewProvider) {
+            vscode.commands.executeCommand('claudeDevChat.focus');
+            // The modal will be triggered by the button in the chat UI
+        }
+    });
+
     context.subscriptions.push(
         toggleCommand,
         triggerCompletionCommand,
         openChatCommand,
         clearChatCommand,
+        configureMCPCommand,
+        openMCPModalCommand,
         statusBarItem,
         completionProviderDisposable!
     );
