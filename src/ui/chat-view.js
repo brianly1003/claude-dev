@@ -630,11 +630,11 @@ function renderMessages(messages) {
                 </div>
                 <div class="message-content-wrapper">
                     <div class="message-content${thinkingClass}">${content}</div>
-                    <button class="message-copy-btn" onclick="copyMessage('${msg.id}')" title="Copy message">
+                    ${!isThinking ? `<button class="message-copy-btn" onclick="copyMessage('${msg.id}')" title="Copy message">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
                         </svg>
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>
         `;
@@ -796,6 +796,7 @@ function updateStreamingMessage(messageId, content, isComplete) {
 
   if (existingMessage) {
     const contentElement = existingMessage.querySelector(".message-content");
+    const copyBtn = existingMessage.querySelector(".message-copy-btn");
     if (contentElement) {
       const formattedContent = formatMessageContent(content);
 
@@ -804,11 +805,15 @@ function updateStreamingMessage(messageId, content, isComplete) {
       if (isThinking && !isComplete) {
         contentElement.className = "message-content thinking-message";
         contentElement.innerHTML = formattedContent;
+        // Hide copy button during thinking
+        if (copyBtn) copyBtn.style.display = "none";
       } else {
         contentElement.className = "message-content";
         contentElement.innerHTML =
           formattedContent +
           (isComplete ? "" : '<span class="streaming-cursor">|</span>');
+        // Show copy button when not thinking
+        if (copyBtn) copyBtn.style.display = "block";
       }
     }
   } else {
@@ -817,6 +822,7 @@ function updateStreamingMessage(messageId, content, isComplete) {
       minute: "2-digit",
     });
     const formattedContent = formatMessageContent(content);
+    const isThinking = content.trim() === "✱ Thinking...";
 
     const messageHtml = `
             <div class="message assistant" data-message-id="${messageId}">
@@ -830,11 +836,11 @@ function updateStreamingMessage(messageId, content, isComplete) {
                     <div class="message-content">${formattedContent}${
       isComplete ? "" : '<span class="streaming-cursor">|</span>'
     }</div>
-                    <button class="message-copy-btn" onclick="copyMessage('${messageId}')" title="Copy message">
+                    ${!isThinking ? `<button class="message-copy-btn" onclick="copyMessage('${messageId}')" title="Copy message">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
                         </svg>
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>
         `;
