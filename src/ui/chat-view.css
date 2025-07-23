@@ -4,8 +4,8 @@
     --claude-accent-hover: #FF8E53;
     --claude-accent-light: rgba(255, 107, 53, 0.1);
     --claude-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);
-    --border-radius: 12px;
-    --border-radius-small: 8px;
+    --border-radius: 8px;
+    --border-radius-small: 4px;
     --spacing: 16px;
     --animation-duration: 0.2s;
 }
@@ -153,24 +153,22 @@ body {
 
 .message-copy-btn {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    background: none;
-    border: none;
+    top: 4px;
+    right: 4px;
+    background: transparent;
+    border: 1px solid var(--vscode-sideBarSectionHeader-border);
     color: var(--vscode-descriptionForeground);
     cursor: pointer;
     padding: 4px;
     border-radius: 4px;
-    opacity: 0;
+    opacity: 1;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10;
-}
-
-.message:hover .message-copy-btn {
-    opacity: 1;
+    width: 24px;
+    height: 24px;
 }
 
 .message-copy-btn:hover {
@@ -206,6 +204,10 @@ body {
 .message.assistant .message-avatar {
     background: var(--claude-gradient);
     color: white;
+}
+
+.message.assistant .message-copy-btn {
+    margin-right: 60px;
 }
 
 .message-content {
