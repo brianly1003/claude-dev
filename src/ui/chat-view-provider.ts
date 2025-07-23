@@ -16,6 +16,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private uiTestService: UITestService;
   private htmlTemplateService: HtmlTemplateService;
   private streamingMessageId: string | null = null;
+  private isGenerating: boolean = false;
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
@@ -117,6 +118,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         case "openFile":
           await this.openFile(data.filePath);
           break;
+        case "runCommand":
+          await this.runTerminalCommand(data.command);
+          break;
+        case "stopGeneration":
+          await this.stopGeneration();
+          break;
         default:
           console.log("Unhandled message type:", data.type, data);
           break;
@@ -159,6 +166,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       thinkingMessage
     );
     this.streamingMessageId = streamingMessage.id;
+    this.isGenerating = true;
+    
+    // Notify frontend that generation has started (thinking phase)
+    if (this._view) {
+      this._view.webview.postMessage({
+        type: "generationStarted"
+      });
+    }
+    
     await this.updateWebview();
 
     try {
@@ -202,6 +218,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
       // Update the streaming message with error content
       this.updateStreamingMessage(errorContent, true);
+    } finally {
+      this.isGenerating = false;
     }
   }
 
@@ -272,11 +290,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   }
 
   private handleStreamingUpdate(partialResponse: string, isComplete: boolean) {
+    // Don't update if generation has been stopped
+    if (!this.isGenerating) {
+      return;
+    }
     this.updateStreamingMessage(partialResponse, isComplete);
   }
 
   private updateStreamingMessage(content: string, isComplete: boolean) {
-    if (!this.streamingMessageId) return;
+    if (!this.streamingMessageId || !this.isGenerating) return;
 
     const currentConversation =
       this.conversationManager.getCurrentConversation();
@@ -929,6 +951,53 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       vscode.window.showErrorMessage(
         `Failed to open file: ${filePath}. ${error instanceof Error ? error.message : "Unknown error"}`
       );
+    }
+  }
+
+  private async runTerminalCommand(command: string) {
+    try {
+      console.log("Running terminal command:", command);
+      
+      // Get or create terminal
+      let terminal = vscode.window.terminals.find(t => t.name === "Claude Dev");
+      if (!terminal) {
+        terminal = vscode.window.createTerminal("Claude Dev");
+      }
+      
+      // Show terminal and run command
+      terminal.show();
+      terminal.sendText(command);
+      
+      console.log("Successfully sent command to terminal:", command);
+    } catch (error) {
+      console.error("Failed to run terminal command:", command, error);
+      vscode.window.showErrorMessage(
+        `Failed to run command: ${command}. ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
+  private async stopGeneration() {
+    try {
+      console.log("Stopping AI generation on user request");
+      
+      // Mark as not generating
+      this.isGenerating = false;
+      
+      // Stop the Claude Code service
+      this.claudeCodeService.stopGeneration();
+      
+      // Clear streaming message ID to prevent further updates
+      this.streamingMessageId = null;
+      
+      // Send confirmation to UI
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "generationStopped"
+        });
+      }
+    } catch (error) {
+      console.error("Failed to stop generation:", error);
     }
   }
 

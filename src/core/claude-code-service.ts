@@ -28,6 +28,7 @@ export interface StreamingCompletionOptions {
 export class ClaudeCodeService {
   private config: ClaudeCodeConfig;
   private outputChannel: vscode.OutputChannel;
+  private currentAbortController: AbortController | null = null;
 
   constructor(config: ClaudeCodeConfig) {
     this.config = config;
@@ -36,6 +37,16 @@ export class ClaudeCodeService {
 
   public updateConfig(config: ClaudeCodeConfig): void {
     this.config = config;
+  }
+
+  public stopGeneration(): void {
+    if (this.currentAbortController) {
+      this.log('Stopping generation on user request');
+      this.currentAbortController.abort();
+      this.currentAbortController = null;
+    } else {
+      this.log('No active generation to stop');
+    }
   }
 
   private log(message: string): void {
@@ -64,10 +75,10 @@ export class ClaudeCodeService {
         this.log(`YOLO Mode disabled - user will be prompted for permissions`);
       }
 
-      const abortController = new AbortController();
+      this.currentAbortController = new AbortController();
       const timeout = setTimeout(() => {
         this.log(`Aborting multi-turn conversation after 180 seconds`);
-        abortController.abort();
+        this.currentAbortController?.abort();
       }, 180000); // 3 minutes for multi-turn conversations
 
       try {
@@ -100,7 +111,7 @@ export class ClaudeCodeService {
         
         const queryOptions: any = {
           prompt: prompt,
-          abortController: abortController,
+          abortController: this.currentAbortController,
           options: {
             // Based on GitHub research - try different permission approaches
             allowedTools: ['Bash', 'LS', 'Read', 'Edit', 'Write', 'Glob', 'Grep', 'Task', 'MultiEdit', 'NotebookRead', 'NotebookEdit'],
@@ -213,6 +224,7 @@ export class ClaudeCodeService {
         }
 
         clearTimeout(timeout);
+        this.currentAbortController = null;
 
         if (accumulatedResponse.trim()) {
           this.log(`Final response: ${accumulatedResponse.substring(0, 100)}...`);
@@ -236,6 +248,7 @@ export class ClaudeCodeService {
 
       } catch (error: any) {
         clearTimeout(timeout);
+        this.currentAbortController = null;
         if (error.name === 'AbortError') {
           this.log(`Request was aborted`);
           return { suggestion: accumulatedResponse || "", error: "Request timeout - partial response may be available" };
@@ -243,6 +256,7 @@ export class ClaudeCodeService {
         throw error;
       } finally {
         clearTimeout(timeout);
+        this.currentAbortController = null;
         // Force garbage collection to free memory
         if (global.gc) {
           global.gc();
