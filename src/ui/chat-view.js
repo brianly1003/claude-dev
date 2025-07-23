@@ -812,8 +812,25 @@ function updateStreamingMessage(messageId, content, isComplete) {
         contentElement.innerHTML =
           formattedContent +
           (isComplete ? "" : '<span class="streaming-cursor">|</span>');
-        // Show copy button when not thinking
-        if (copyBtn) copyBtn.style.display = "block";
+        // Show copy button when not thinking - if it doesn't exist, create it
+        if (copyBtn) {
+          copyBtn.style.display = "block";
+        } else {
+          // Add copy button if it doesn't exist (transition from thinking to content)
+          const wrapper = existingMessage.querySelector(".message-content-wrapper");
+          if (wrapper) {
+            const copyButton = document.createElement("button");
+            copyButton.className = "message-copy-btn";
+            copyButton.onclick = () => copyMessage(messageId);
+            copyButton.title = "Copy message";
+            copyButton.innerHTML = `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+              </svg>
+            `;
+            wrapper.appendChild(copyButton);
+          }
+        }
       }
     }
   } else {
