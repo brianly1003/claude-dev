@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { ClaudeCodeService } from './claude-code-service';
-import { ClaudeDevCompletionProvider } from './completion-provider';
-import { ChatViewProvider } from './chat-view-provider';
+import { ClaudeCodeService } from './core/claude-code-service';
+import { ClaudeDevCompletionProvider } from './features/completion/completion-provider';
+import { ChatViewProvider } from './ui/chat-view-provider';
 
 let claudeCodeService: ClaudeCodeService;
 let completionProvider: ClaudeDevCompletionProvider;
@@ -36,7 +36,9 @@ function initializeService() {
         claudeCodePath: config.get<string>('claudeCodePath', 'claude'),
         enableLogging: config.get<boolean>('enableLogging', false),
         workspaceRoot: workspaceRoot,
-        yoloMode: config.get<boolean>('yoloMode', true)
+        yoloMode: config.get<boolean>('yoloMode', true),
+        model: config.get<string>('model', 'default'),
+        thinkingMode: config.get<string>('thinkingMode', 'none')
     });
 }
 
@@ -138,7 +140,9 @@ function updateConfiguration() {
         claudeCodePath: config.get<string>('claudeCodePath', 'claude'),
         enableLogging: config.get<boolean>('enableLogging', false),
         workspaceRoot: workspaceRoot,
-        yoloMode: config.get<boolean>('yoloMode', true)
+        yoloMode: config.get<boolean>('yoloMode', true),
+        model: config.get<string>('model', 'default'),
+        thinkingMode: config.get<string>('thinkingMode', 'none')
     });
     
     updateStatusBarItem();

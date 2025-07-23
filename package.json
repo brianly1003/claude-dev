@@ -56,6 +56,18 @@
           "type": "boolean",
           "default": true,
           "description": "Enable YOLO mode - automatically approve all tool permissions (like claude-code-chat project)"
+        },
+        "claudeDev.model": {
+          "type": "string",
+          "enum": ["default", "opus", "sonnet"],
+          "default": "default",
+          "description": "Claude model to use: default, opus, or sonnet"
+        },
+        "claudeDev.thinkingMode": {
+          "type": "string",
+          "enum": ["none", "think", "think-hard", "think-harder", "ultrathink"],
+          "default": "none",
+          "description": "Thinking intensity mode for Claude responses"
         }
       }
     },

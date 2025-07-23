@@ -14,6 +14,8 @@ export interface ConversationMetadata {
   lastActivity: number;
   messageCount: number;
   workspaceRoot?: string;
+  totalTokens?: number;
+  estimatedCost?: number;
 }
 
 export interface Conversation {
@@ -29,7 +31,10 @@ export class ConversationManager {
   constructor(context: vscode.ExtensionContext) {
     this.storageUri = vscode.Uri.joinPath(context.globalStorageUri, 'conversations');
     this.ensureStorageDirectory();
-    this.loadConversationIndex();
+    this.loadConversationIndex().then(() => {
+      // Clean up any stale entries after loading
+      this.validateAndCleanIndex();
+    });
   }
 
   private async ensureStorageDirectory(): Promise<void> {
@@ -95,6 +100,15 @@ export class ConversationManager {
     return this.currentConversation;
   }
 
+  public updateConversationMetrics(tokens: number, cost: number): void {
+    if (this.currentConversation) {
+      this.currentConversation.metadata.totalTokens = tokens;
+      this.currentConversation.metadata.estimatedCost = cost;
+      this.saveCurrentConversation();
+      this.updateConversationIndex();
+    }
+  }
+
   public async loadConversation(conversationId: string): Promise<Conversation | null> {
     try {
       const conversationFile = vscode.Uri.joinPath(this.storageUri, `${conversationId}.json`);
@@ -118,6 +132,13 @@ export class ConversationManager {
       return conversation;
     } catch (error) {
       console.error(`Failed to load conversation ${conversationId}:`, error);
+      
+      // If the file doesn't exist, clean up the stale entry from index
+      if (error && (error as any).code === 'FileNotFound') {
+        console.warn(`Conversation file not found: ${conversationId}, cleaning up from index`);
+        await this.removeStaleConversation(conversationId);
+      }
+      
       return null;
     }
   }
@@ -212,8 +233,80 @@ export class ConversationManager {
     }
   }
 
+  public async clearAllConversations(): Promise<void> {
+    try {
+      // Delete all conversation files
+      for (const conversation of this.conversationIndex) {
+        try {
+          const conversationFile = vscode.Uri.joinPath(this.storageUri, `${conversation.id}.json`);
+          await vscode.workspace.fs.delete(conversationFile);
+        } catch (error) {
+          console.warn(`Failed to delete conversation file ${conversation.id}:`, error);
+        }
+      }
+
+      // Clear the index
+      this.conversationIndex = [];
+      await this.updateConversationIndex();
+
+      // Clear current conversation
+      this.currentConversation = null;
+    } catch (error) {
+      console.error('Failed to clear all conversations:', error);
+      throw error;
+    }
+  }
+
+  public async removeStaleConversation(conversationId: string): Promise<void> {
+    try {
+      // Remove from index only (file is already gone)
+      const initialLength = this.conversationIndex.length;
+      this.conversationIndex = this.conversationIndex.filter(conv => conv.id !== conversationId);
+      
+      // Only update if we actually removed something
+      if (this.conversationIndex.length < initialLength) {
+        await this.updateConversationIndex();
+        console.log(`Removed stale conversation from index: ${conversationId}`);
+      }
+
+      // Clear current conversation if it was the stale one
+      if (this.currentConversation?.metadata.id === conversationId) {
+        this.currentConversation = null;
+      }
+    } catch (error) {
+      console.error(`Failed to remove stale conversation ${conversationId} from index:`, error);
+    }
+  }
+
   public clearHistory(): void {
     this.currentConversation = null;
+  }
+
+  public async validateAndCleanIndex(): Promise<void> {
+    try {
+      const validConversations = [];
+      
+      for (const conv of this.conversationIndex) {
+        try {
+          // Check if the conversation file exists
+          const conversationFile = vscode.Uri.joinPath(this.storageUri, `${conv.id}.json`);
+          await vscode.workspace.fs.stat(conversationFile);
+          validConversations.push(conv);
+        } catch (error) {
+          // File doesn't exist, skip this conversation
+          console.warn(`Removing stale conversation from index: ${conv.id}`);
+        }
+      }
+
+      // Update the index if we found stale entries
+      if (validConversations.length !== this.conversationIndex.length) {
+        this.conversationIndex = validConversations;
+        await this.updateConversationIndex();
+        console.log(`Cleaned up ${this.conversationIndex.length - validConversations.length} stale conversation entries`);
+      }
+    } catch (error) {
+      console.error('Failed to validate conversation index:', error);
+    }
   }
 
   public async loadMostRecentConversation(): Promise<Conversation | null> {
@@ -227,16 +320,17 @@ export class ConversationManager {
   // Get conversation history as context for Claude
   public getConversationContext(): string {
     if (!this.currentConversation || this.currentConversation.messages.length === 0) {
-      return "No previous conversation context.";
+      return "";
     }
 
-    const recentMessages = this.currentConversation.messages.slice(-10); // Last 10 messages
-    let context = "Previous conversation context:\n";
+    // Only last 3 messages with heavy truncation
+    const recentMessages = this.currentConversation.messages.slice(-3);
+    let context = "";
     
     for (const message of recentMessages) {
-      const role = message.role === 'user' ? 'User' : 'Claude';
-      const timeStr = new Date(message.timestamp).toLocaleTimeString();
-      context += `${role} (${timeStr}): ${message.content.substring(0, 200)}${message.content.length > 200 ? '...' : ''}\n`;
+      const role = message.role === 'user' ? 'U' : 'A';
+      // Heavily truncate to 100 chars
+      context += `${role}: ${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}\n`;
     }
 
     return context;

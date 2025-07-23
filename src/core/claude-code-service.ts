@@ -6,6 +6,8 @@ export interface ClaudeCodeConfig {
   enableLogging: boolean;
   workspaceRoot?: string;
   yoloMode?: boolean; // Enable automatic permission approval
+  model?: string; // Claude model: default, opus, sonnet
+  thinkingMode?: string; // Thinking intensity: none, think, think-hard, think-harder, ultrathink
 }
 
 export interface CompletionRequest {
@@ -64,9 +66,9 @@ export class ClaudeCodeService {
 
       const abortController = new AbortController();
       const timeout = setTimeout(() => {
-        this.log(`Aborting multi-turn conversation after 120 seconds`);
+        this.log(`Aborting multi-turn conversation after 180 seconds`);
         abortController.abort();
-      }, 120000); // 2 minutes for multi-turn conversations with tool usage
+      }, 180000); // 3 minutes for multi-turn conversations
 
       try {
         const execArgs = [];
@@ -84,11 +86,22 @@ export class ClaudeCodeService {
           execArgs.push('Bash,LS,Read,Edit,Write,Glob,Grep,Task,MultiEdit,NotebookRead,NotebookEdit');
         }
         
+        // Add model selection
+        if (this.config.model && this.config.model !== 'default') {
+          execArgs.push('--model');
+          execArgs.push(this.config.model);
+        }
+        
+        // Add thinking mode
+        if (this.config.thinkingMode && this.config.thinkingMode !== 'none') {
+          execArgs.push('--thinking');
+          execArgs.push(this.config.thinkingMode);
+        }
+        
         const queryOptions: any = {
           prompt: prompt,
           abortController: abortController,
           options: {
-            maxTurns: 5, // Allow multi-turn conversations so Claude can execute actions
             // Based on GitHub research - try different permission approaches
             allowedTools: ['Bash', 'LS', 'Read', 'Edit', 'Write', 'Glob', 'Grep', 'Task', 'MultiEdit', 'NotebookRead', 'NotebookEdit'],
             useCommitSigning: false, // Disable to allow more Bash operations
@@ -113,24 +126,33 @@ export class ClaudeCodeService {
           abortController: '[AbortController]'
         }, null, 2)}`);
 
+        let turnCount = 0;
+        const maxResponseLength = 50000; // Limit response length
+        
         for await (const message of query(queryOptions)) {
           messages.push(message);
+          turnCount++;
           
-          // Log message type for debugging
-          this.log(`Received message type: ${message.type}`);
+          this.log(`Turn ${turnCount}: Received message type: ${message.type}`);
+          
+          // Check for response length overflow
+          if (accumulatedResponse.length > maxResponseLength) {
+            this.log(`Response length exceeded ${maxResponseLength} chars, stopping`);
+            break;
+          }
           
           if (message.type === 'assistant' && message.message) {
             const assistantMessage = message.message;
             
-            // Log what Claude is doing
-            this.log(`Assistant message with ${assistantMessage.content?.length || 0} content blocks`);
-            
-            // Content is in message.content array
             if (assistantMessage.content && Array.isArray(assistantMessage.content)) {
               for (const block of assistantMessage.content) {
                 if (block.type === 'text' && block.text) {
-                  accumulatedResponse += block.text + '\n\n';
-                  this.log(`Added text: "${block.text.substring(0, 100)}..."`);
+                  // Prevent individual text blocks from being too large
+                  const truncatedText = block.text.length > 5000 ? 
+                    block.text.substring(0, 5000) + '\n\n[Response truncated to prevent overflow]' : 
+                    block.text;
+                  
+                  accumulatedResponse += truncatedText + '\n\n';
                   
                   // Stream update to UI immediately
                   if (options?.onStreamingUpdate) {
@@ -212,9 +234,15 @@ export class ClaudeCodeService {
         clearTimeout(timeout);
         if (error.name === 'AbortError') {
           this.log(`Request was aborted`);
-          return { suggestion: "", error: "Request timeout" };
+          return { suggestion: accumulatedResponse || "", error: "Request timeout - partial response may be available" };
         }
         throw error;
+      } finally {
+        clearTimeout(timeout);
+        // Force garbage collection to free memory
+        if (global.gc) {
+          global.gc();
+        }
       }
 
     } catch (error: any) {

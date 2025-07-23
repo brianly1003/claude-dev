@@ -1,0 +1,1201 @@
+// Main chat view JavaScript
+const vscode = acquireVsCodeApi();
+
+// UI Elements
+const messagesContainer = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendButton = document.getElementById('sendButton');
+const mcpModal = document.getElementById('mcpModalOverlay');
+const mcpServerBtn = document.getElementById('mcpServerBtn');
+const mcpCloseBtn = document.getElementById('mcpCloseBtn');
+const customServerModal = document.getElementById('customServerModalOverlay');
+const addServerBtn = document.getElementById('addServerBtn');
+const customServerCloseBtn = document.getElementById('customServerCloseBtn');
+const customServerForm = document.getElementById('customServerForm');
+const advancedToggle = document.getElementById('advancedToggle');
+const cancelCustomServer = document.getElementById('cancelCustomServer');
+
+// State
+let isWaiting = false;
+
+// Popular MCP servers data
+const popularServers = [
+    {
+        name: 'Context7',
+        icon: '📖',
+        description: 'Up-to-date Code Docs For Any Project',
+        category: 'documentation'
+    },
+    {
+        name: 'Sequential Thinking',
+        icon: '🧠',
+        description: 'Step-by-step reasoning capabilities',
+        category: 'reasoning'
+    },
+    {
+        name: 'Memory',
+        icon: '🧠',
+        description: 'Knowledge graph storage',
+        category: 'storage'
+    },
+    {
+        name: 'Puppeteer',
+        icon: '🎭',
+        description: 'Browser automation',
+        category: 'automation'
+    },
+    {
+        name: 'Fetch',
+        icon: '🌐',
+        description: 'HTTP requests & web scraping',
+        category: 'networking'
+    },
+    {
+        name: 'Filesystem',
+        icon: '📁',
+        description: 'File operations & management',
+        category: 'files'
+    }
+];
+
+// === MCP Server Management ===
+
+function showCustomServerForm() {
+    hideMCPModal();
+    resetCustomServerForm();
+    customServerModal.classList.add('visible');
+    
+    document.querySelector('#customServerModalOverlay .mcp-modal-title').textContent = 'Add Custom MCP Server';
+    document.querySelector('#saveCustomServer .mcp-btn-text').textContent = 'Add Server';
+}
+
+function showEditServerForm(serverData) {
+    console.log('Showing edit form with server data:', serverData);
+    
+    hideMCPModal();
+    
+    // Pre-populate form with existing data
+    document.getElementById('serverName').value = serverData.name;
+    document.getElementById('serverCommand').value = serverData.command;
+    document.getElementById('serverArgs').value = serverData.args;
+    document.getElementById('serverType').value = serverData.type;
+    document.getElementById('serverEnv').value = serverData.env;
+    
+    // Store original name for updates
+    document.getElementById('customServerForm').setAttribute('data-original-name', serverData.originalName);
+    
+    // Update form title and button text
+    document.querySelector('#customServerModalOverlay .mcp-modal-title').textContent = 'Edit MCP Server';
+    document.querySelector('#saveCustomServer .mcp-btn-text').textContent = 'Update Server';
+    
+    customServerModal.classList.add('visible');
+    hideFormError();
+}
+
+function hideCustomServerForm() {
+    customServerModal.classList.remove('visible');
+}
+
+function cancelCustomServerForm() {
+    hideCustomServerForm();
+    showMCPModal();
+}
+
+function resetCustomServerForm() {
+    customServerForm.reset();
+    hideFormError();
+    setSubmitButtonState(false);
+    
+    const advancedSection = document.querySelector('.mcp-advanced-section');
+    advancedSection.classList.remove('expanded');
+    
+    document.getElementById('customServerForm').removeAttribute('data-original-name');
+}
+
+function toggleAdvancedConfig() {
+    const advancedSection = document.querySelector('.mcp-advanced-section');
+    advancedSection.classList.toggle('expanded');
+}
+
+function showFormError(message) {
+    const errorDiv = document.getElementById('formError');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function hideFormError() {
+    const errorDiv = document.getElementById('formError');
+    errorDiv.style.display = 'none';
+}
+
+function setSubmitButtonState(loading) {
+    const submitBtn = document.getElementById('saveCustomServer');
+    const btnText = submitBtn.querySelector('.mcp-btn-text');
+    const btnSpinner = submitBtn.querySelector('.mcp-btn-spinner');
+    
+    submitBtn.disabled = loading;
+    btnText.style.display = loading ? 'none' : 'block';
+    btnSpinner.style.display = loading ? 'block' : 'none';
+}
+
+function validateServerForm(formData) {
+    const errors = [];
+    
+    if (!formData.name?.trim()) {
+        errors.push('Server name is required');
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(formData.name.trim())) {
+        errors.push('Server name can only contain letters, numbers, hyphens, and underscores');
+    }
+    
+    if (!formData.command?.trim()) {
+        errors.push('Command is required');
+    }
+    
+    if (!formData.type) {
+        errors.push('Connection type is required');
+    }
+    
+    if (formData.env?.trim()) {
+        const envLines = formData.env.split('\\n').filter(line => line.trim());
+        for (const line of envLines) {
+            if (!line.includes('=') || line.startsWith('=')) {
+                errors.push('Environment variables must be in KEY=value format');
+                break;
+            }
+        }
+    }
+    
+    return errors;
+}
+
+function parseEnvironmentVariables(envText) {
+    if (!envText?.trim()) return {};
+    
+    const env = {};
+    const lines = envText.split('\\n').filter(line => line.trim());
+    
+    for (const line of lines) {
+        const [key, ...valueParts] = line.split('=');
+        if (key?.trim() && valueParts.length > 0) {
+            env[key.trim()] = valueParts.join('=');
+        }
+    }
+    
+    return env;
+}
+
+function handleCustomServerSubmit(event) {
+    event.preventDefault();
+    hideFormError();
+    
+    const formData = {
+        name: document.getElementById('serverName').value.trim(),
+        command: document.getElementById('serverCommand').value.trim(),
+        args: document.getElementById('serverArgs').value.trim(),
+        type: document.getElementById('serverType').value,
+        env: document.getElementById('serverEnv').value.trim()
+    };
+    
+    const errors = validateServerForm(formData);
+    if (errors.length > 0) {
+        showFormError(errors[0]);
+        return;
+    }
+    
+    const args = formData.args ? formData.args.split(/\\s+/).filter(arg => arg) : [];
+    const env = parseEnvironmentVariables(formData.env);
+    
+    const serverConfig = {
+        name: formData.name,
+        command: formData.command,
+        args: args,
+        type: formData.type,
+        ...(Object.keys(env).length > 0 && { env })
+    };
+    
+    setSubmitButtonState(true);
+    
+    const originalName = document.getElementById('customServerForm').getAttribute('data-original-name');
+    
+    if (originalName) {
+        vscode.postMessage({
+            type: 'updateMCPServer',
+            originalName: originalName,
+            serverConfig: serverConfig
+        });
+    } else {
+        vscode.postMessage({
+            type: 'addCustomMCPServer',
+            serverConfig: serverConfig
+        });
+    }
+}
+
+// === MCP Modal Functions ===
+
+function showMCPModal() {
+    vscode.postMessage({ type: 'openMCPModal' });
+}
+
+function hideMCPModal() {
+    mcpModal.classList.remove('visible');
+}
+
+function renderPopularServers(configuredTools = [], configuredServers = []) {
+    const popularGrid = document.getElementById('popularServers');
+    
+    popularGrid.innerHTML = popularServers.map(server => {
+        const isInstalled = configuredTools.some(tool => 
+            tool.toLowerCase().includes(server.name.toLowerCase().replace(/\\s+/g, '')) ||
+            tool.toLowerCase().includes(server.name.toLowerCase())
+        ) || configuredServers.some(configServer => {
+            const serverKey = server.name.toLowerCase().replace(/\\s+/g, '-');
+            const displayName = configServer.displayName || configServer.name;
+            return configServer.name === serverKey || 
+                   displayName.toLowerCase() === server.name.toLowerCase();
+        });
+        
+        return `
+            <div class="mcp-server-card ${isInstalled ? 'installed' : ''}" 
+                 data-server="${server.name}"
+                 style="${isInstalled ? 'cursor: default;' : 'cursor: pointer;'}">
+                <div class="mcp-install-status ${isInstalled ? 'installed' : ''}">
+                    ${isInstalled ? 'Installed' : 'Install'}
+                </div>
+                <div class="mcp-server-icon">${server.icon}</div>
+                <div class="mcp-server-name">${server.name}</div>
+                <div class="mcp-server-description">${server.description}</div>
+            </div>
+        `;
+    }).join('');
+
+    const serverCards = popularGrid.querySelectorAll('.mcp-server-card');
+    serverCards.forEach(card => {
+        const serverName = card.getAttribute('data-server');
+        const isInstalled = card.classList.contains('installed');
+        
+        if (!isInstalled) {
+            card.addEventListener('click', () => handleServerInstallClick(serverName));
+        }
+    });
+}
+
+function handleServerInstallClick(serverName) {
+    console.log('Installing MCP server:', serverName);
+    
+    const card = document.querySelector(`[data-server="${serverName}"]`);
+    if (!card) {
+        console.error('Server card not found:', serverName);
+        return;
+    }
+    
+    const installStatus = card.querySelector('.mcp-install-status');
+    const originalText = installStatus.textContent;
+    
+    installStatus.textContent = 'Installing...';
+    installStatus.classList.add('installing');
+    card.style.pointerEvents = 'none';
+    card.style.opacity = '0.7';
+    
+    console.log('Sending install request for:', serverName);
+    vscode.postMessage({ 
+        type: 'installMCPServer', 
+        serverName: serverName 
+    });
+    
+    setTimeout(() => {
+        if (installStatus.textContent === 'Installing...') {
+            console.warn('Installation timeout for:', serverName);
+            installStatus.textContent = originalText;
+            installStatus.classList.remove('installing');
+            card.style.pointerEvents = '';
+            card.style.opacity = '';
+        }
+    }, 10000);
+}
+
+function updateMCPModal(data) {
+    console.log('Updating MCP Modal with data:', data);
+    const configuredStatus = document.getElementById('configuredStatus');
+    const configuredServers = document.getElementById('configuredServers');
+    
+    if (data.configured && data.configuredServers && data.configuredServers.length > 0) {
+        configuredStatus.textContent = `${data.configuredServers.length} configured`;
+        configuredStatus.classList.add('configured');
+        
+        configuredServers.innerHTML = `
+            <div class="mcp-configured-servers">
+                ${data.configuredServers.map(server => {
+                    const displayName = server.displayName || server.name;
+                    const args = server.args ? server.args.join(' ') : '';
+                    
+                    return `
+                        <div class="mcp-configured-server">
+                            <div class="mcp-configured-server-header">
+                                <h3 class="mcp-configured-server-name">${displayName.toLowerCase()}</h3>
+                                <div class="mcp-configured-server-actions">
+                                    <button class="mcp-configured-action-btn" data-action="edit" data-server="${server.name}">Edit</button>
+                                    <button class="mcp-configured-action-btn delete" data-action="delete" data-server="${server.name}">Delete</button>
+                                </div>
+                            </div>
+                            <div class="mcp-connection-type">${server.type.toUpperCase()}</div>
+                            <div class="mcp-configured-server-details">
+                                <div class="mcp-configured-server-detail">
+                                    <span class="mcp-configured-server-label">Command:</span>
+                                    <span class="mcp-configured-server-value">${server.command}</span>
+                                </div>
+                                ${args ? `
+                                    <div class="mcp-configured-server-detail">
+                                        <span class="mcp-configured-server-label">Args:</span>
+                                        <span class="mcp-configured-server-value">${args}</span>
+                                    </div>
+                                ` : ''}
+                                ${server.env && Object.keys(server.env).length > 0 ? `
+                                    <div class="mcp-configured-server-detail">
+                                        <span class="mcp-configured-server-label">Environment:</span>
+                                        <span class="mcp-configured-server-value">${Object.keys(server.env).length} variables</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        configuredServers.onclick = (e) => {
+            const btn = e.target.closest('.mcp-configured-action-btn');
+            if (!btn) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const action = btn.getAttribute('data-action');
+            const serverName = btn.getAttribute('data-server');
+            
+            console.log('Button clicked via delegation - Action:', action, 'Server:', serverName);
+            
+            if (action === 'delete') {
+                handleDeleteServer(serverName);
+            } else if (action === 'edit') {
+                handleEditServer(serverName);
+            } else {
+                console.warn('Unknown action:', action);
+            }
+        };
+    } else {
+        configuredStatus.textContent = '0 configured';
+        configuredStatus.classList.remove('configured');
+        configuredServers.innerHTML = '<div class="mcp-no-servers">No MCP servers configured</div>';
+    }
+    
+    renderPopularServers(data.tools, data.configuredServers || []);
+    mcpModal.classList.add('visible');
+}
+
+function handleCustomServerResult(data) {
+    setSubmitButtonState(false);
+    
+    if (data.success) {
+        hideCustomServerForm();
+        showMCPModal();
+    } else {
+        showFormError(data.error || 'Failed to add MCP server. Please check your configuration.');
+    }
+}
+
+function handleDeleteServer(serverName) {
+    console.log('handleDeleteServer() called with:', serverName);
+    console.log('Sending delete request for server:', serverName);
+    
+    vscode.postMessage({
+        type: 'deleteMCPServer',
+        serverName: serverName
+    });
+}
+
+function handleEditServer(serverName) {
+    console.log('Edit server:', serverName);
+    vscode.postMessage({
+        type: 'editMCPServer', 
+        serverName: serverName
+    });
+}
+
+// === Message Functions ===
+
+function sendMessage() {
+    const message = messageInput.value.trim();
+    if (!message || isWaiting) return;
+
+    const inputTokens = estimateTokens(message);
+    updateTotalTokenCount(inputTokens);
+
+    isWaiting = true;
+    sendButton.disabled = true;
+    showTypingIndicator();
+    
+    vscode.postMessage({
+        type: 'sendMessage',
+        message: message
+    });
+
+    messageInput.value = '';
+    autoResize();
+    updateInputTokenCount();
+}
+
+function showTypingIndicator() {
+    const typingHtml = `
+        <div class="typing-indicator">
+            <div class="message-avatar" style="background: var(--claude-gradient); color: white;">C</div>
+            <span style="color: var(--vscode-descriptionForeground);">Claude is thinking</span>
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+    `;
+    
+    const emptyState = messagesContainer.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+    
+    messagesContainer.insertAdjacentHTML('beforeend', typingHtml);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const typingIndicator = messagesContainer.querySelector('.typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
+function renderMessages(messages) {
+    hideTypingIndicator();
+    resetTokenCounts();
+    
+    if (messages.length === 0) {
+        messagesContainer.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-logo">C</div>
+                <h2>Claude Dev Assistant</h2>
+                <p>Your AI-powered coding companion</p>
+                <p>I can explore your codebase, explain complex logic, implement features, and help debug issues.</p>
+                
+                <ul class="feature-list">
+                    <li><div class="feature-icon">📁</div> Explore project structure</li>
+                    <li><div class="feature-icon">🔍</div> Analyze and explain code</li>
+                    <li><div class="feature-icon">✨</div> Generate new features</li>
+                    <li><div class="feature-icon">🐛</div> Debug and fix issues</li>
+                </ul>
+            </div>
+        `;
+        return;
+    }
+
+    const emptyState = messagesContainer.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+
+    messagesContainer.innerHTML = messages.map(msg => {
+        const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const content = formatMessageContent(msg.content);
+        const isUser = msg.role === 'user';
+        const avatar = isUser ? 'You' : 'C';
+        const sender = isUser ? 'You' : 'Claude';
+        
+        const messageTokens = estimateTokens(msg.content);
+        updateTotalTokenCount(messageTokens);
+        
+        const isThinking = !isUser && (
+            msg.content.includes('🤔') || msg.content.includes('💭') || msg.content.includes('🔍') ||
+            msg.content.includes('⚡') || msg.content.includes('🧠') || msg.content.includes('🔧') ||
+            msg.content.includes('📚') || msg.content.includes('✨') || msg.content.includes('🎯') ||
+            msg.content.includes('🚀')
+        );
+        const thinkingClass = isThinking ? ' thinking-message' : '';
+        
+        return `
+            <div class="message ${msg.role}" data-message-id="${msg.id}">
+                <div class="message-header">
+                    <div class="message-avatar">${avatar}</div>
+                    <span>${sender}</span>
+                    <span>•</span>
+                    <span>${time}</span>
+                </div>
+                <div class="message-content${thinkingClass}">${content}</div>
+            </div>
+        `;
+    }).join('');
+
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function formatMessageContent(content) {
+    if (content.includes('Using TodoWrite') || (content.includes('todos') && content.includes('"id"') && content.includes('"status"'))) {
+        return formatTodoList(content);
+    }
+    
+    let formatted = content
+        .replace(/\`\`\`([\\s\\S]*?)\`\`\`/g, '<pre><code>$1</code></pre>')
+        .replace(/\`([^\`]+)\`/g, '<code>$1</code>')
+        .replace(/\\*\\*([^\\*]+)\\*\\*/g, '<strong>$1</strong>')
+        .replace(/\\*([^\\*]+)\\*/g, '<em>$1</em>')
+        .replace(/\\n/g, '<br>');
+    
+    return formatted;
+}
+
+function formatTodoList(content) {
+    try {
+        const jsonMatch = content.match(/\\{[\\s\\S]*"todos"[\\s\\S]*\\}/);
+        if (!jsonMatch) return content;
+        
+        const todoData = JSON.parse(jsonMatch[0]);
+        if (!todoData.todos || !Array.isArray(todoData.todos)) return content;
+        
+        const todos = todoData.todos;
+        const totalTodos = todos.length;
+        const completedTodos = todos.filter(todo => todo.status === 'completed').length;
+        const inProgressTodos = todos.filter(todo => todo.status === 'in_progress').length;
+        const pendingTodos = todos.filter(todo => todo.status === 'pending').length;
+        
+        return `
+            <div class="todo-container">
+                <div class="todo-header">
+                    <div class="todo-title">📋 Tasks</div>
+                    <div class="todo-stats">${completedTodos}/${totalTodos} completed • ${inProgressTodos} in progress • ${pendingTodos} pending</div>
+                </div>
+                <div class="todo-list">
+                    ${todos.map(todo => `
+                        <div class="todo-item ${todo.status}">
+                            <div class="todo-content">
+                                <div class="todo-text">${todo.content}</div>
+                                <div class="todo-meta">
+                                    <span class="todo-priority ${todo.priority}">${todo.priority}</span> • 
+                                    <span class="todo-status">${todo.status.replace('_', ' ')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="todo-progress">${Math.round((completedTodos / totalTodos) * 100)}% complete</div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error formatting todo list:', error);
+        return content;
+    }
+}
+
+function updateStreamingMessage(messageId, content, isComplete) {
+    const existingMessage = messagesContainer.querySelector(`[data-message-id="${messageId}"]`);
+    
+    if (existingMessage) {
+        const contentElement = existingMessage.querySelector('.message-content');
+        if (contentElement) {
+            const formattedContent = formatMessageContent(content);
+            
+            const isThinking = content.includes('🤔') || content.includes('💭') || content.includes('🔍') ||
+                             content.includes('⚡') || content.includes('🧠') || content.includes('🔧') ||
+                             content.includes('📚') || content.includes('✨') || content.includes('🎯') ||
+                             content.includes('🚀');
+            
+            if (isThinking && !isComplete) {
+                contentElement.className = 'message-content thinking-message';
+                contentElement.innerHTML = formattedContent;
+            } else {
+                contentElement.className = 'message-content';
+                contentElement.innerHTML = formattedContent + (isComplete ? '' : '<span class="streaming-cursor">|</span>');
+            }
+        }
+    } else {
+        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const formattedContent = formatMessageContent(content);
+        
+        const messageHtml = `
+            <div class="message assistant" data-message-id="${messageId}">
+                <div class="message-header">
+                    <div class="message-avatar">C</div>
+                    <span>Claude</span>
+                    <span>•</span>
+                    <span>${time}</span>
+                </div>
+                <div class="message-content">${formattedContent}${isComplete ? '' : '<span class="streaming-cursor">|</span>'}</div>
+            </div>
+        `;
+        
+        messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
+    }
+    
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    if (isComplete) {
+        const cursor = messagesContainer.querySelector(`[data-message-id="${messageId}"] .streaming-cursor`);
+        if (cursor) {
+            cursor.remove();
+        }
+        
+        if (content && !content.includes('🤔') && !content.includes('💭') && !content.includes('🔍')) {
+            const responseTokens = estimateTokens(content);
+            updateTotalTokenCount(responseTokens);
+        }
+    }
+}
+
+function autoResize() {
+    messageInput.style.height = 'auto';
+    const newHeight = Math.min(messageInput.scrollHeight, 100);
+    messageInput.style.height = newHeight + 'px';
+}
+
+// === Token Management ===
+
+let totalTokensUsed = 0;
+const inputTokensElement = document.getElementById('inputTokens');
+const totalTokensElement = document.getElementById('totalTokens');
+
+function estimateTokens(text) {
+    if (!text) return 0;
+    const cleanText = text.trim();
+    if (cleanText.length === 0) return 0;
+    
+    const words = cleanText.split(/\\s+/).length;
+    const characters = cleanText.length;
+    
+    return Math.max(1, Math.ceil(characters / 4 + words * 0.1));
+}
+
+function updateInputTokenCount() {
+    const text = messageInput.value;
+    const tokenCount = estimateTokens(text);
+    if (inputTokensElement) {
+        inputTokensElement.textContent = tokenCount.toString();
+        
+        const tokenCounter = inputTokensElement.closest('.token-counter');
+        if (tokenCounter) {
+            tokenCounter.classList.toggle('updating', tokenCount > 0);
+            
+            // Add visual feedback for long messages
+            inputTokensElement.classList.remove('warning', 'error');
+            if (tokenCount > 2000) {
+                inputTokensElement.classList.add('error');
+            } else if (tokenCount > 1000) {
+                inputTokensElement.classList.add('warning');
+            }
+        }
+    }
+}
+
+function updateTotalTokenCount(additionalTokens = 0) {
+    totalTokensUsed += additionalTokens;
+    if (totalTokensElement) {
+        let displayText;
+        if (totalTokensUsed >= 1000) {
+            displayText = (totalTokensUsed / 1000).toFixed(1) + 'k';
+        } else {
+            displayText = totalTokensUsed.toString();
+        }
+        totalTokensElement.textContent = displayText;
+        
+        // Update token counter styling based on usage
+        const tokenCounter = totalTokensElement.closest('.token-counter');
+        if (tokenCounter) {
+            tokenCounter.classList.remove('has-warning', 'has-error');
+            totalTokensElement.classList.remove('warning', 'error');
+            
+            if (totalTokensUsed > 10000) {
+                tokenCounter.classList.add('has-error');
+                totalTokensElement.classList.add('error');
+            } else if (totalTokensUsed > 5000) {
+                tokenCounter.classList.add('has-warning');
+                totalTokensElement.classList.add('warning');
+            }
+        }
+    }
+    
+    const estimatedCost = totalTokensUsed * 0.003 / 1000;
+    vscode.postMessage({
+        type: 'updateConversationMetrics',
+        tokens: totalTokensUsed,
+        cost: estimatedCost
+    });
+}
+
+function resetTokenCounts() {
+    totalTokensUsed = 0;
+    updateTotalTokenCount(0);
+    updateInputTokenCount();
+}
+
+// === Slash Commands ===
+
+const slashCommandsDropdown = document.getElementById('slashCommandsDropdown'); 
+let selectedIndex = -1;
+let slashCommands = [];
+let isShowingSlashCommands = false;
+
+const slashCommandsData = [
+    { command: '/bug', icon: '🐛', description: 'Debug issues and identify solutions' },
+    { command: '/review', icon: '👀', description: 'Code review for quality and best practices' },
+    { command: '/explain', icon: '📖', description: 'Detailed code explanations' },
+    { command: '/optimize', icon: '⚡', description: 'Performance optimization suggestions' },
+    { command: '/refactor', icon: '🔄', description: 'Code refactoring advice' },
+    { command: '/test', icon: '🧪', description: 'Help writing tests' },
+    { command: '/docs', icon: '📝', description: 'Generate documentation' },
+    { command: '/security', icon: '🔒', description: 'Security vulnerability analysis' },
+    { command: '/fix', icon: '🔧', description: 'Fix errors and issues' },
+    { command: '/implement', icon: '⚙️', description: 'Implementation guidance' },
+    { command: '/design', icon: '🎨', description: 'Architecture design help' },
+    { command: '/api', icon: '🌐', description: 'API design and implementation' },
+    { command: '/database', icon: '🗄️', description: 'Database schema and queries' },
+    { command: '/deploy', icon: '🚀', description: 'Deployment strategies' },
+    { command: '/performance', icon: '📊', description: 'Performance analysis' },
+    { command: '/structure', icon: '🏗️', description: 'Code organization' },
+    { command: '/patterns', icon: '🎯', description: 'Design pattern suggestions' },
+    { command: '/migrate', icon: '📦', description: 'Technology migration help' },
+    { command: '/compare', icon: '⚖️', description: 'Compare approaches/technologies' },
+    { command: '/help', icon: '❓', description: 'Show all available commands' }
+];
+
+function showSlashCommands(filter = '') {
+    slashCommands = slashCommandsData.filter(cmd => 
+        cmd.command.toLowerCase().includes(filter.toLowerCase())
+    );
+    
+    if (slashCommands.length === 0) {
+        hideSlashCommands();
+        return;
+    }
+
+    const html = slashCommands.map((cmd, index) => 
+        '<div class="slash-command-item" data-index="' + index + '" data-command="' + cmd.command + '">' +
+            '<div class="slash-command-icon">' + cmd.icon + '</div>' +
+            '<div class="slash-command-content">' +
+                '<div class="slash-command-title">' + cmd.command + '</div>' +
+                '<div class="slash-command-description">' + cmd.description + '</div>' +
+            '</div>' +
+        '</div>'
+    ).join('');
+
+    slashCommandsDropdown.innerHTML = html;
+    slashCommandsDropdown.classList.add('visible');
+    isShowingSlashCommands = true;
+    selectedIndex = -1;
+
+    slashCommandsDropdown.querySelectorAll('.slash-command-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const command = item.getAttribute('data-command');
+            selectSlashCommand(command);
+        });
+    });
+}
+
+function hideSlashCommands() {
+    slashCommandsDropdown.classList.remove('visible');
+    isShowingSlashCommands = false;
+    selectedIndex = -1;
+}
+
+function selectSlashCommand(command) {
+    const value = messageInput.value;
+    const cursorPos = messageInput.selectionStart;
+    const beforeCursor = value.substring(0, cursorPos);
+    const afterCursor = value.substring(cursorPos);
+    
+    const slashIndex = beforeCursor.lastIndexOf('/');
+    if (slashIndex !== -1) {
+        const newValue = value.substring(0, slashIndex) + command + ' ' + afterCursor;
+        messageInput.value = newValue;
+        const newCursorPos = slashIndex + command.length + 1;
+        messageInput.setSelectionRange(newCursorPos, newCursorPos);
+    }
+    
+    hideSlashCommands();
+    messageInput.focus();
+    autoResize();
+}
+
+function updateSelectedItem() {
+    slashCommandsDropdown.querySelectorAll('.slash-command-item').forEach((item, index) => {
+        item.classList.toggle('selected', index === selectedIndex);
+    });
+}
+
+// === History Modal ===
+
+const historyButton = document.getElementById('historyButton');
+const historyModalOverlay = document.getElementById('historyModalOverlay');
+const historyCloseBtn = document.getElementById('historyCloseBtn');
+const historyConversationList = document.getElementById('historyConversationList');
+const historySearchInput = document.getElementById('historySearchInput');
+
+// Store all conversations for filtering
+let allConversations = [];
+
+function showHistoryModal() {
+    historyModalOverlay.classList.add('visible');
+    loadConversationHistory();
+}
+
+function hideHistoryModal() {
+    historyModalOverlay.classList.remove('visible');
+}
+
+function loadConversationHistory() {
+    historyConversationList.innerHTML = '<div class="history-loading">Loading conversations...</div>';
+    vscode.postMessage({
+        type: 'requestConversationHistory'
+    });
+}
+
+function renderConversationHistory(conversations) {
+    // Store all conversations for filtering
+    allConversations = conversations;
+    
+    // Clear search input when new data arrives
+    historySearchInput.value = '';
+    
+    renderFilteredConversations(conversations);
+}
+
+function renderFilteredConversations(conversations) {
+    if (conversations.length === 0) {
+        if (allConversations.length === 0) {
+            historyConversationList.innerHTML = '<div class="history-loading">No conversation history found.</div>';
+        } else {
+            historyConversationList.innerHTML = '<div class="history-loading">No conversations match your search.</div>';
+        }
+        return;
+    }
+
+    const conversationItems = conversations.map(conversation => {
+        const date = new Date(conversation.lastActivity);
+        const dateStr = date.toLocaleDateString() + ' at ' + date.toLocaleTimeString();
+        const messageCount = conversation.messageCount || 0;
+        
+        let estimatedCost = '0.000';
+        if (conversation.estimatedCost) {
+            estimatedCost = conversation.estimatedCost.toFixed(3);
+        } else if (conversation.totalTokens) {
+            estimatedCost = (conversation.totalTokens * 0.003 / 1000).toFixed(3);
+        }
+        
+        const lastMessage = conversation.lastMessage || 'No messages';
+        const truncatedLast = lastMessage.length > 50 ? lastMessage.substring(0, 50) + '...' : lastMessage;
+
+        return '<div class="history-conversation-item" data-conversation-id="' + conversation.id + '">' +
+            '<div class="history-conversation-content" onclick="selectConversation(\'' + conversation.id + '\')">' +
+                '<div class="history-conversation-title">' + conversation.title + '</div>' +
+                '<div class="history-conversation-meta">' +
+                    '<span>' + dateStr + '</span>' +
+                    '<span>•</span>' +
+                    '<span>' + messageCount + ' messages</span>' +
+                    '<span>•</span>' +
+                    '<span class="history-conversation-cost">$' + estimatedCost + '</span>' +
+                '</div>' +
+                '<div class="history-conversation-last">Last: ' + truncatedLast + '</div>' +
+            '</div>' +
+            '<button class="history-delete-btn" onclick="deleteConversation(\'' + conversation.id + '\', event)" title="Delete conversation">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">' +
+                    '<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>' +
+                '</svg>' +
+            '</button>' +
+        '</div>';
+    }).join('');
+
+    historyConversationList.innerHTML = conversationItems;
+}
+
+function filterConversations(searchTerm) {
+    if (!searchTerm.trim()) {
+        renderFilteredConversations(allConversations);
+        return;
+    }
+    
+    const filtered = allConversations.filter(conversation => {
+        return conversation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (conversation.lastMessage && conversation.lastMessage.toLowerCase().includes(searchTerm.toLowerCase()));
+    });
+    
+    renderFilteredConversations(filtered);
+}
+
+function selectConversation(conversationId) {
+    hideHistoryModal();
+    vscode.postMessage({
+        type: 'loadConversation',
+        conversationId: conversationId
+    });
+}
+
+function deleteConversation(conversationId, event) {
+    console.log('deleteConversation called with:', conversationId);
+    event.stopPropagation(); // Prevent triggering selectConversation
+    
+    // Find and update the conversation item UI
+    const conversationItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+    console.log('Found conversation item:', conversationItem);
+    if (conversationItem) {
+        conversationItem.style.opacity = '0.5';
+        conversationItem.style.pointerEvents = 'none';
+        
+        // Add loading indicator to delete button
+        const deleteBtn = conversationItem.querySelector('.history-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="spinner"><circle cx="12" cy="12" r="2"/></svg>';
+            deleteBtn.style.animation = 'spin 1s linear infinite';
+        }
+    }
+    
+    // Send delete request to backend
+    vscode.postMessage({
+        type: 'deleteConversation',
+        conversationId: conversationId
+    });
+}
+
+function handleDeleteConversationResult(data) {
+    console.log('Received deleteConversationResult:', data);
+    const { conversationId, success, error } = data;
+    const conversationItem = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+    
+    if (success) {
+        // Remove the conversation item with animation
+        if (conversationItem) {
+            conversationItem.style.transform = 'translateX(-100%)';
+            conversationItem.style.opacity = '0';
+            setTimeout(() => {
+                conversationItem.remove();
+                // Check if history is empty now
+                const remainingItems = document.querySelectorAll('.history-conversation-item');
+                if (remainingItems.length === 0) {
+                    historyConversationList.innerHTML = '<div class="history-loading">No conversation history found.</div>';
+                }
+            }, 300);
+        }
+    } else {
+        // Restore the conversation item and show error
+        if (conversationItem) {
+            conversationItem.style.opacity = '1';
+            conversationItem.style.pointerEvents = '';
+            
+            // Restore delete button
+            const deleteBtn = conversationItem.querySelector('.history-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+                deleteBtn.style.animation = '';
+            }
+        }
+        
+        console.error('Failed to delete conversation:', error || 'Unknown error');
+    }
+}
+
+function handleClearAllHistoryResult(data) {
+    console.log('Received clearAllHistoryResult:', data);
+    const { success, error } = data;
+    
+    if (success) {
+        // Clear all conversations from UI
+        allConversations = [];
+        historySearchInput.value = '';
+        historyConversationList.innerHTML = '<div class="history-loading">No conversation history found.</div>';
+    } else {
+        console.error('Failed to clear all conversations:', error || 'Unknown error');
+        // You could show an error message to the user here if needed
+    }
+}
+
+// === Settings ===
+
+function syncUISettings(settings) {
+    if (settings.model) {
+        document.getElementById('modelSelect').value = settings.model;
+    }
+    if (settings.thinkingMode) {
+        document.getElementById('thinkingSelect').value = settings.thinkingMode;
+    }
+}
+
+// === Event Listeners ===
+
+// New Chat Button
+document.getElementById('newChatButton').addEventListener('click', () => {
+    vscode.postMessage({ type: 'clearChat' });
+});
+
+// MCP Modal
+mcpServerBtn.addEventListener('click', showMCPModal);
+mcpCloseBtn.addEventListener('click', hideMCPModal);
+mcpModal.addEventListener('click', (e) => {
+    if (e.target === mcpModal) {
+        hideMCPModal();
+    }
+});
+
+// Custom Server Form
+addServerBtn.addEventListener('click', showCustomServerForm);
+customServerCloseBtn.addEventListener('click', cancelCustomServerForm);
+cancelCustomServer.addEventListener('click', cancelCustomServerForm);
+advancedToggle.addEventListener('click', toggleAdvancedConfig);
+customServerForm.addEventListener('submit', handleCustomServerSubmit);
+
+customServerModal.addEventListener('click', (e) => {
+    if (e.target === customServerModal) {
+        cancelCustomServerForm();
+    }
+});
+
+document.getElementById('serverName').addEventListener('input', hideFormError);
+document.getElementById('serverCommand').addEventListener('input', hideFormError);
+
+// Message Input
+messageInput.addEventListener('input', () => {
+    autoResize();
+    updateInputTokenCount();
+    
+    const value = messageInput.value;
+    const cursorPos = messageInput.selectionStart;
+    const beforeCursor = value.substring(0, cursorPos);
+    
+    const slashIndex = beforeCursor.lastIndexOf('/');
+    const spaceIndex = beforeCursor.lastIndexOf(' ');
+    
+    if (slashIndex > spaceIndex && slashIndex !== -1) {
+        const commandPart = beforeCursor.substring(slashIndex);
+        if (commandPart.length > 1) {
+            showSlashCommands(commandPart);
+        } else if (commandPart === '/') {
+            showSlashCommands();
+        }
+    } else {
+        hideSlashCommands();
+    }
+});
+
+messageInput.addEventListener('keydown', (e) => {
+    if (isShowingSlashCommands) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, slashCommands.length - 1);
+            updateSelectedItem();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, -1);
+            updateSelectedItem();
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && selectedIndex < slashCommands.length) {
+                selectSlashCommand(slashCommands[selectedIndex].command);
+            }
+            return;
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            hideSlashCommands();
+            return;
+        }
+    }
+    
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        hideSlashCommands();
+        sendMessage();
+    }
+});
+
+document.addEventListener('click', (e) => {
+    if (!messageInput.contains(e.target) && !slashCommandsDropdown.contains(e.target)) {
+        hideSlashCommands();
+    }
+});
+
+// History Modal
+historyButton.addEventListener('click', showHistoryModal);
+historyCloseBtn.addEventListener('click', hideHistoryModal);
+document.getElementById('clearAllHistoryBtn').addEventListener('click', () => {
+    vscode.postMessage({ type: 'clearAllHistory' });
+});
+historySearchInput.addEventListener('input', (e) => {
+    filterConversations(e.target.value);
+});
+historyModalOverlay.addEventListener('click', (e) => {
+    if (e.target === historyModalOverlay) {
+        hideHistoryModal();
+    }
+});
+
+// Send Button
+sendButton.addEventListener('click', sendMessage);
+
+// Model Controls
+document.getElementById('modelSelect').addEventListener('change', (e) => {
+    vscode.postMessage({
+        type: 'updateConfig',
+        key: 'model',
+        value: e.target.value
+    });
+});
+
+document.getElementById('thinkingSelect').addEventListener('change', (e) => {
+    vscode.postMessage({
+        type: 'updateConfig',
+        key: 'thinkingMode',
+        value: e.target.value
+    });
+});
+
+// VSCode Message Handler
+window.addEventListener('message', event => {
+    const message = event.data;
+    switch (message.type) {
+        case 'updateMessages':
+            renderMessages(message.messages);
+            isWaiting = false;
+            sendButton.disabled = false;
+            break;
+        case 'streamingUpdate':
+            updateStreamingMessage(message.messageId, message.content, message.isComplete);
+            if (message.isComplete) {
+                isWaiting = false;
+                sendButton.disabled = false;
+            }
+            break;
+        case 'showMCPModal':
+            updateMCPModal(message.data);
+            break;
+        case 'customServerResult':
+            handleCustomServerResult(message.data);
+            break;
+        case 'showEditMCPForm':
+            showEditServerForm(message.serverData);
+            break;
+        case 'syncSettings':
+            syncUISettings(message.settings);
+            break;
+        case 'resetTokens':
+            resetTokenCounts();
+            break;
+        case 'conversationHistory':
+            renderConversationHistory(message.conversations);
+            break;
+        case 'deleteConversationResult':
+            handleDeleteConversationResult(message.data);
+            break;
+        case 'clearAllHistoryResult':
+            handleClearAllHistoryResult(message.data);
+            break;
+    }
+});
+
+// Initialize
+autoResize();
+updateInputTokenCount();
+
+vscode.postMessage({ type: 'requestSettings' });
+vscode.postMessage({ type: 'requestConversation' });

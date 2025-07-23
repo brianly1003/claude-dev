@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { ClaudeCodeService, CompletionRequest } from './claude-code-service';
-import { ContextExtractor } from './context-extractor';
+import { ClaudeCodeService, CompletionRequest } from '../../core/claude-code-service';
+import { ContextExtractor } from '../../core/context-extractor';
 
 export class ClaudeDevCompletionProvider implements vscode.InlineCompletionItemProvider {
     private claudeCodeService: ClaudeCodeService;
