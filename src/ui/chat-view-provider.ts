@@ -114,6 +114,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         case "clearAllHistory":
           await this.clearAllConversations();
           break;
+        case "openFile":
+          await this.openFile(data.filePath);
+          break;
         default:
           console.log("Unhandled message type:", data.type, data);
           break;
@@ -150,7 +153,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     // Create a streaming assistant message placeholder with thinking indicator
-    const thinkingMessage = this.getThinkingMessage();
+    const thinkingMessage = "✱ Thinking...";
     const streamingMessage = this.conversationManager.addMessage(
       "assistant",
       thinkingMessage
@@ -202,24 +205,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private getThinkingMessage(): string {
-    const thinkingMessages = [
-      "🤔 Analyzing your request...",
-      "💭 Let me think about this...",
-      "🔍 Examining the codebase...",
-      "⚡ Processing your query...",
-      "🧠 Considering the best approach...",
-      "🔧 Preparing my response...",
-      "📚 Reviewing the context...",
-      "✨ Crafting a solution...",
-      "🎯 Focusing on your needs...",
-      "🚀 Working on it...",
-    ];
-
-    return thinkingMessages[
-      Math.floor(Math.random() * thinkingMessages.length)
-    ];
-  }
 
   private shouldRoutToMCPHandler(message: string): boolean {
     const lowerMessage = message.toLowerCase();
@@ -922,6 +907,28 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           },
         });
       }
+    }
+  }
+
+  private async openFile(filePath: string) {
+    try {
+      console.log("Opening file:", filePath);
+      
+      // Convert the file path to a VSCode URI
+      const fileUri = vscode.Uri.file(filePath);
+      
+      // Open the file in VSCode
+      const document = await vscode.workspace.openTextDocument(fileUri);
+      await vscode.window.showTextDocument(document, vscode.ViewColumn.Active);
+      
+      console.log("Successfully opened file:", filePath);
+    } catch (error) {
+      console.error("Failed to open file:", filePath, error);
+      
+      // Show error message to user
+      vscode.window.showErrorMessage(
+        `Failed to open file: ${filePath}. ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 

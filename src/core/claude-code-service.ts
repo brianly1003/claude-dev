@@ -161,37 +161,41 @@ export class ClaudeCodeService {
                 } else if (block.type === 'tool_use') {
                   this.log(`Claude is using tool: ${block.name} with input: ${JSON.stringify(block.input).substring(0, 100)}...`);
                   
-                  // Show detailed tool usage information
-                  let toolDetails = `**🔧 Using ${block.name}**\n`;
+                  // Format tool usage like claude-code: ● ToolName(description)
+                  let toolDetails = '';
                   
                   if (block.name === 'Bash' && block.input.command) {
-                    toolDetails += `Command: \`${block.input.command}\`\n`;
-                    if (block.input.description) {
-                      toolDetails += `Purpose: ${block.input.description}\n`;
-                    }
+                    toolDetails = `● Bash(${block.input.command})\n`;
                   } else if (block.name === 'Read' && block.input.file_path) {
-                    toolDetails += `Reading file: \`${block.input.file_path}\`\n`;
+                    toolDetails = `● Read(${block.input.file_path})\n`;
                   } else if (block.name === 'Edit' && block.input.file_path) {
-                    toolDetails += `Editing file: \`${block.input.file_path}\`\n`;
-                    if (block.input.old_string) {
-                      toolDetails += `Replacing: \`${block.input.old_string.substring(0, 50)}${block.input.old_string.length > 50 ? '...' : ''}\`\n`;
-                    }
+                    toolDetails = `● Edit(${block.input.file_path})\n`;
                   } else if (block.name === 'Write' && block.input.file_path) {
-                    toolDetails += `Writing to: \`${block.input.file_path}\`\n`;
+                    toolDetails = `● Write(${block.input.file_path})\n`;
                   } else if (block.name === 'LS' && block.input.path) {
-                    toolDetails += `Listing directory: \`${block.input.path}\`\n`;
+                    toolDetails = `● LS(${block.input.path})\n`;
                   } else if (block.name === 'Grep' && block.input.pattern) {
-                    toolDetails += `Searching for: \`${block.input.pattern}\`\n`;
-                    if (block.input.path) {
-                      toolDetails += `In: \`${block.input.path}\`\n`;
-                    }
+                    const searchIn = block.input.path ? ` in ${block.input.path}` : '';
+                    toolDetails = `● Grep(${block.input.pattern}${searchIn})\n`;
+                  } else if (block.name === 'Glob' && block.input.pattern) {
+                    const searchIn = block.input.path ? ` in ${block.input.path}` : '';
+                    toolDetails = `● Glob(${block.input.pattern}${searchIn})\n`;
+                  } else if (block.name === 'Task' && block.input.description) {
+                    toolDetails = `● Task(${block.input.description})\n`;
+                  } else if (block.name === 'TodoWrite') {
+                    toolDetails = `● TodoWrite(Update task list)\n`;
                   } else {
-                    // Generic tool details for other tools
-                    const inputStr = JSON.stringify(block.input, null, 2);
-                    toolDetails += `Input: \`\`\`json\n${inputStr}\n\`\`\`\n`;
+                    // Generic format for other tools
+                    const description = block.input.description || 
+                                      block.input.command || 
+                                      block.input.file_path || 
+                                      block.input.pattern || 
+                                      Object.keys(block.input)[0] || 
+                                      'operation';
+                    toolDetails = `● ${block.name}(${description})\n`;
                   }
                   
-                  accumulatedResponse += toolDetails + '\n';
+                  accumulatedResponse += toolDetails;
                   
                   // Stream tool usage update to UI immediately
                   if (options?.onStreamingUpdate) {

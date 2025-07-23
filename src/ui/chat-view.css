@@ -147,6 +147,46 @@ body {
     color: var(--vscode-descriptionForeground);
 }
 
+.message-content-wrapper {
+    position: relative;
+}
+
+.message-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.message:hover .message-copy-btn {
+    opacity: 1;
+}
+
+.message-copy-btn:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-foreground);
+}
+
+.message-copy-btn.copied {
+    color: #4CAF50;
+    opacity: 1;
+}
+
+.message-copy-btn.copied:hover {
+    color: #4CAF50;
+}
+
 .message-avatar {
     width: 20px;
     height: 20px;
@@ -1576,15 +1616,60 @@ body {
     30% { transform: scale(1.2); opacity: 1; }
 }
 
-/* Thinking message animation */
+/* Tool usage styling */
+.tool-usage {
+    color: #4A9EFF;
+    font-size: 13px;
+    font-weight: 500;
+    margin: 4px 0;
+    padding: 2px 0;
+    line-height: 1.4;
+}
+
+.tool-usage::before {
+    content: '●';
+    display: inline-block;
+    color: #4A9EFF;
+    font-size: 10px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Clickable file path styling */
+.clickable-file-path {
+    color: #4A9EFF;
+    text-decoration: underline;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 2px;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.clickable-file-path:hover {
+    background: rgba(74, 158, 255, 0.1);
+    color: #3A8EEF;
+}
+
+/* Thinking message styling */
 .thinking-message {
-    opacity: 0.8;
-    animation: thinking-pulse 2s ease-in-out infinite;
-    color: var(--vscode-descriptionForeground) !important;
+    background: rgba(255, 107, 53, 0.08);
+    border: 1px solid rgba(255, 107, 53, 0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    display: inline-block;
+    
+    font-style: italic;
+    font-weight: 500;
+    color: var(--claude-accent);
+    
+    animation: thinking-pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
 }
 
 @keyframes thinking-pulse {
-    0%, 100% { opacity: 0.6; }
+    0%, 100% { opacity: 0.7; }
     50% { opacity: 1; }
 }
 

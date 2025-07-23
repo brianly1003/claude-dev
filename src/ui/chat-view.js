@@ -512,12 +512,7 @@ function renderMessages(messages) {
         const messageTokens = estimateTokens(msg.content);
         updateTotalTokenCount(messageTokens);
         
-        const isThinking = !isUser && (
-            msg.content.includes('🤔') || msg.content.includes('💭') || msg.content.includes('🔍') ||
-            msg.content.includes('⚡') || msg.content.includes('🧠') || msg.content.includes('🔧') ||
-            msg.content.includes('📚') || msg.content.includes('✨') || msg.content.includes('🎯') ||
-            msg.content.includes('🚀')
-        );
+        const isThinking = !isUser && msg.content.trim() === '✱ Thinking...';
         const thinkingClass = isThinking ? ' thinking-message' : '';
         
         return `
@@ -528,7 +523,14 @@ function renderMessages(messages) {
                     <span>•</span>
                     <span>${time}</span>
                 </div>
-                <div class="message-content${thinkingClass}">${content}</div>
+                <div class="message-content-wrapper">
+                    <div class="message-content${thinkingClass}">${content}</div>
+                    <button class="message-copy-btn" onclick="copyMessage('${msg.id}')" title="Copy message">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         `;
     }).join('');
@@ -541,12 +543,56 @@ function formatMessageContent(content) {
         return formatTodoList(content);
     }
     
-    let formatted = content
-        .replace(/\`\`\`([\\s\\S]*?)\`\`\`/g, '<pre><code>$1</code></pre>')
-        .replace(/\`([^\`]+)\`/g, '<code>$1</code>')
-        .replace(/\\*\\*([^\\*]+)\\*\\*/g, '<strong>$1</strong>')
-        .replace(/\\*([^\\*]+)\\*/g, '<em>$1</em>')
-        .replace(/\\n/g, '<br>');
+    // Process content in steps to avoid conflicts
+    
+    // First convert line breaks to proper newlines for regex processing
+    let formatted = content.replace(/\\n/g, '\n');
+    
+    // Handle code blocks first to protect them from file path processing
+    formatted = formatted.replace(/\`\`\`([\\s\\S]*?)\`\`\`/g, '<pre><code>$1</code></pre>');
+    
+    // Handle inline code
+    formatted = formatted.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
+    
+    // Format tool usage lines with clickable file paths
+    formatted = formatted.replace(/● ([^(\n]+)\(([^)\n]*)\)/g, (match, toolName, params) => {
+        // Simple check if params looks like a file path (contains / or \ and has extension)
+        if ((params.includes('/') || params.includes('\\')) && /\.[a-zA-Z0-9]+$/.test(params.trim())) {
+            return `<div class="tool-usage">${toolName}(<span class="clickable-file-path" onclick="openFile('${params.trim()}')">${params}</span>)</div>`;
+        }
+        return `<div class="tool-usage">${toolName}(${params})</div>`;
+    });
+    
+    // Now handle standalone file paths - but skip any that are already inside tool-usage divs
+    const toolUsageRegex = /<div class="tool-usage">.*?<\/div>/gs;
+    const parts = formatted.split(toolUsageRegex);
+    const toolUsageParts = formatted.match(toolUsageRegex) || [];
+    
+    // Process only the non-tool-usage parts for standalone file paths
+    for (let i = 0; i < parts.length; i++) {
+        parts[i] = parts[i].replace(/([\/\\](?:[^\/\\<>:"|?*\s\n]+[\/\\])*[^\/\\<>:"|?*\s\n]+\.[a-zA-Z0-9]+)/g, 
+            '<span class="clickable-file-path" onclick="openFile(\'$1\')">$1</span>');
+    }
+    
+    // Reconstruct the formatted content
+    formatted = '';
+    for (let i = 0; i < parts.length; i++) {
+        formatted += parts[i];
+        if (i < toolUsageParts.length) {
+            formatted += toolUsageParts[i];
+        }
+    }
+    
+    // Continue with other formatting
+    formatted = formatted
+        // Bold text
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        // Italic text
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        // Clean up multiple consecutive line breaks
+        .replace(/\n{3,}/g, '\n\n')
+        // Convert remaining newlines to breaks
+        .replace(/\n/g, '<br>');
     
     return formatted;
 }
@@ -601,10 +647,7 @@ function updateStreamingMessage(messageId, content, isComplete) {
         if (contentElement) {
             const formattedContent = formatMessageContent(content);
             
-            const isThinking = content.includes('🤔') || content.includes('💭') || content.includes('🔍') ||
-                             content.includes('⚡') || content.includes('🧠') || content.includes('🔧') ||
-                             content.includes('📚') || content.includes('✨') || content.includes('🎯') ||
-                             content.includes('🚀');
+            const isThinking = content.trim() === '✱ Thinking...';
             
             if (isThinking && !isComplete) {
                 contentElement.className = 'message-content thinking-message';
@@ -626,7 +669,14 @@ function updateStreamingMessage(messageId, content, isComplete) {
                     <span>•</span>
                     <span>${time}</span>
                 </div>
-                <div class="message-content">${formattedContent}${isComplete ? '' : '<span class="streaming-cursor">|</span>'}</div>
+                <div class="message-content-wrapper">
+                    <div class="message-content">${formattedContent}${isComplete ? '' : '<span class="streaming-cursor">|</span>'}</div>
+                    <button class="message-copy-btn" onclick="copyMessage('${messageId}')" title="Copy message">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         `;
         
@@ -641,7 +691,7 @@ function updateStreamingMessage(messageId, content, isComplete) {
             cursor.remove();
         }
         
-        if (content && !content.includes('🤔') && !content.includes('💭') && !content.includes('🔍')) {
+        if (content && content.trim() !== '✱ Thinking...') {
             const responseTokens = estimateTokens(content);
             updateTotalTokenCount(responseTokens);
         }
@@ -1010,6 +1060,83 @@ function handleClearAllHistoryResult(data) {
         console.error('Failed to clear all conversations:', error || 'Unknown error');
         // You could show an error message to the user here if needed
     }
+}
+
+// Open file functionality
+function openFile(filePath) {
+    console.log('Opening file:', filePath);
+    vscode.postMessage({
+        type: 'openFile',
+        filePath: filePath
+    });
+}
+
+// Copy message functionality
+function copyMessage(messageId) {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageElement) {
+        console.error('Message element not found:', messageId);
+        return;
+    }
+    
+    const contentElement = messageElement.querySelector('.message-content');
+    if (!contentElement) {
+        console.error('Message content not found:', messageId);
+        return;
+    }
+    
+    // Get the text content, removing HTML tags but preserving line breaks
+    let textContent = contentElement.innerHTML
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .trim();
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(textContent).then(() => {
+        // Visual feedback
+        const copyBtn = messageElement.querySelector('.message-copy-btn');
+        const originalTitle = copyBtn.title;
+        const originalSvg = copyBtn.innerHTML;
+        
+        // Show checkmark icon
+        copyBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+        `;
+        copyBtn.title = 'Copied!';
+        copyBtn.classList.add('copied');
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+            copyBtn.innerHTML = originalSvg;
+            copyBtn.title = originalTitle;
+            copyBtn.classList.remove('copied');
+        }, 2000);
+        
+    }).catch(err => {
+        console.error('Failed to copy message:', err);
+        
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = textContent;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        // Still show visual feedback
+        const copyBtn = messageElement.querySelector('.message-copy-btn');
+        copyBtn.classList.add('copied');
+        setTimeout(() => copyBtn.classList.remove('copied'), 2000);
+    });
 }
 
 // === Settings ===
