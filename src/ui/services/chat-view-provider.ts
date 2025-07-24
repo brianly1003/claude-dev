@@ -3,9 +3,9 @@ import {
   ClaudeCodeService,
   CompletionRequest,
   StreamingCompletionOptions,
-} from "../core/claude-code-service";
-import { ConversationManager } from "../core/conversation-manager";
-import { UITestService } from "../features/ui-testing/ui-test-service";
+} from "../../core/claude-code-service";
+import { ConversationManager } from "../../core/conversation-manager";
+import { UITestService } from "../../features/ui-testing/ui-test-service";
 import { HtmlTemplateService } from "./html-template-service";
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
@@ -306,7 +306,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     // Find and update the streaming message
     const messageIndex = currentConversation.messages.findIndex(
-      (msg) => msg.id === this.streamingMessageId
+      (msg: any) => msg.id === this.streamingMessageId
     );
     if (messageIndex !== -1) {
       currentConversation.messages[messageIndex].content = content;
@@ -415,7 +415,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async installSpecificMCPServer(serverName: string) {
-    const { MCPManager } = await import("../features/mcp/mcp-manager");
+    const { MCPManager } = await import("../../features/mcp/mcp-manager");
     const mcpManager = new MCPManager();
 
     // Convert server name to consistent format for storage
@@ -506,7 +506,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       const existingServers = this.uiTestService.getMCPStatus();
       if (
         existingServers.tools.some(
-          (tool) => tool.toLowerCase() === serverConfig.name.toLowerCase()
+          (tool: any) => tool.toLowerCase() === serverConfig.name.toLowerCase()
         )
       ) {
         throw new Error(
@@ -515,7 +515,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
 
       // Add server via MCP manager
-      const { MCPManager } = await import("../features/mcp/mcp-manager");
+      const { MCPManager } = await import("../../features/mcp/mcp-manager");
       const mcpManager = new MCPManager();
 
       mcpManager.addMCPServer(serverConfig.name, {
@@ -582,7 +582,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         serverName
       );
 
-      const { MCPManager } = await import("../features/mcp/mcp-manager");
+      const { MCPManager } = await import("../../features/mcp/mcp-manager");
       const mcpManager = new MCPManager();
 
       // Reload config to ensure latest state
@@ -631,7 +631,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       );
 
       // Get the current server configuration
-      const { MCPManager } = await import("../features/mcp/mcp-manager");
+      const { MCPManager } = await import("../../features/mcp/mcp-manager");
       const mcpManager = new MCPManager();
       mcpManager.reloadConfiguration();
 
@@ -683,7 +683,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         throw new Error("Server name and command are required");
       }
 
-      const { MCPManager } = await import("../features/mcp/mcp-manager");
+      const { MCPManager } = await import("../../features/mcp/mcp-manager");
       const mcpManager = new MCPManager();
       mcpManager.reloadConfiguration();
 
@@ -794,7 +794,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const conversations = this.conversationManager.getConversationList();
 
     // Enhance conversation metadata with last message preview
-    const enhancedConversationsPromises = conversations.map(async (conv) => {
+    const enhancedConversationsPromises = conversations.map(async (conv: any) => {
       try {
         const lastMessage = await this.getLastMessagePreview(conv.id);
         return {
@@ -813,7 +813,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       enhancedConversationsPromises
     );
     const enhancedConversations = enhancedConversationsResults.filter(
-      (conv) => conv !== null
+      (conv: any) => conv !== null
     );
 
     if (this._view) {

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ClaudeCodeService } from './core/claude-code-service';
 import { ClaudeDevCompletionProvider } from './features/completion/completion-provider';
-import { ChatViewProvider } from './ui/chat-view-provider';
+import { ChatViewProvider } from './ui/services/chat-view-provider';
 
 let claudeCodeService: ClaudeCodeService;
 let completionProvider: ClaudeDevCompletionProvider;

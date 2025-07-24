@@ -19,6 +19,7 @@ const cancelCustomServer = document.getElementById("cancelCustomServer");
 let isWaiting = false;
 let isGenerating = false;
 let isManuallyStopped = false;
+let isInitialized = false;
 
 // Popular MCP servers data
 const popularServers = [
@@ -259,7 +260,7 @@ function hideMCPModal() {
   mcpModal.classList.remove("visible");
 }
 
-function renderPopularServers(configuredTools = [], configuredServers = []) {
+function renderPopularServers(configuredTools = [], configuredServers = [], installing = null) {
   const popularGrid = document.getElementById("popularServers");
 
   popularGrid.innerHTML = popularServers
@@ -288,11 +289,13 @@ function renderPopularServers(configuredTools = [], configuredServers = []) {
                    isInstalled ? "cursor: default;" : "cursor: pointer;"
                  }">
                 <div class="mcp-install-status ${
-                  isInstalled ? "installed" : ""
-                }">
-                    ${isInstalled ? "Installed" : "Install"}
+                  isInstalled ? "installed" : "installing"
+                } ${installing === server.name ? "installing" : ""}">
+                    ${installing === server.name ? "Installing..." : (isInstalled ? "Installed" : "Install")}
                 </div>
-                <div class="mcp-server-icon">${server.icon}</div>
+                <div class="mcp-server-icon">
+                    ${server.icon || server.name.charAt(0).toUpperCase()}
+                </div>
                 <div class="mcp-server-name">${server.name}</div>
                 <div class="mcp-server-description">${server.description}</div>
             </div>
@@ -370,14 +373,34 @@ function updateMCPModal(data) {
                     return `
                         <div class="mcp-configured-server">
                             <div class="mcp-configured-server-header">
-                                <h3 class="mcp-configured-server-name">${displayName.toLowerCase()}</h3>
+                                <div class="mcp-configured-server-info">
+                                    <div class="mcp-configured-server-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M9 11l3 3L22 4"/>
+                                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                                        </svg>
+                                    </div>
+                                    <h3 class="mcp-configured-server-name">${displayName.toLowerCase()}</h3>
+                                </div>
                                 <div class="mcp-configured-server-actions">
                                     <button class="mcp-configured-action-btn" data-action="edit" data-server="${
                                       server.name
-                                    }">Edit</button>
+                                    }">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                        Edit
+                                    </button>
                                     <button class="mcp-configured-action-btn delete" data-action="delete" data-server="${
                                       server.name
-                                    }">Delete</button>
+                                    }">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                        </svg>
+                                        Delete
+                                    </button>
                                 </div>
                             </div>
                             <div class="mcp-connection-type">${server.type.toUpperCase()}</div>
@@ -451,7 +474,7 @@ function updateMCPModal(data) {
       '<div class="mcp-no-servers">No MCP servers configured</div>';
   }
 
-  renderPopularServers(data.tools, data.configuredServers || []);
+  renderPopularServers(data.tools, data.configuredServers || [], data.installing);
   mcpModal.classList.add("visible");
 }
 
@@ -1740,7 +1763,9 @@ window.addEventListener("message", (event) => {
       }
       break;
     case "showMCPModal":
-      updateMCPModal(message.data);
+      if (isInitialized) {
+        updateMCPModal(message.data);
+      }
       break;
     case "customServerResult":
       handleCustomServerResult(message.data);
@@ -1788,3 +1813,8 @@ hideModelDropdown();
 
 vscode.postMessage({ type: "requestSettings" });
 vscode.postMessage({ type: "requestConversation" });
+
+// Mark as initialized after a short delay to ensure all initial messages are processed
+setTimeout(() => {
+  isInitialized = true;
+}, 100);

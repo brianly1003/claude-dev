@@ -19,7 +19,8 @@
       "WebFetch(domain:docs.roocode.com)",
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
