@@ -1186,7 +1186,14 @@ body {
         font-size: 9px;
     }
     
-    .compact-select, .model-select-button {
+    .compact-select {
+        min-width: 108px;
+        max-width: 130px;
+        font-size: 11px;
+        height: 26px;
+    }
+
+    .model-select-button {
         min-width: 60px;
         max-width: 130px;
         font-size: 11px;

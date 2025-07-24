@@ -1780,5 +1780,11 @@ window.addEventListener("message", (event) => {
 autoResize();
 updateInputTokenCount();
 
+// Ensure all modals are hidden on initialization
+hideMCPModal();
+hideCustomServerForm();
+hideHistoryModal();
+hideModelDropdown();
+
 vscode.postMessage({ type: "requestSettings" });
 vscode.postMessage({ type: "requestConversation" });
