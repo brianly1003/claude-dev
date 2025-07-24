@@ -512,9 +512,38 @@ function handleEditServer(serverName) {
 // === Message Functions ===
 
 function showHelpMessage() {
+  // Hide empty state if visible
+  const emptyState = messagesContainer.querySelector(".empty-state");
+  if (emptyState) {
+    emptyState.style.display = "none";
+  }
+
+  const time = new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const messageId = Date.now().toString();
+
   // Add user message
-  addMessage("user", "Show all available commands");
-  
+  const userMessageHtml = `
+    <div class="message user" data-message-id="user-${messageId}">
+      <div class="message-header">
+        <div class="message-avatar">You</div>
+        <span>You</span>
+        <span>•</span>
+        <span>${time}</span>
+      </div>
+      <div class="message-content-wrapper">
+        <div class="message-content">Show all available commands</div>
+        <button class="message-copy-btn" onclick="copyMessage('user-${messageId}')" title="Copy message">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+
   // Create help content with all available commands
   const helpContent = `
 <div style="font-family: var(--vscode-font-family); line-height: 1.6;">
@@ -523,16 +552,12 @@ function showHelpMessage() {
     Here are all the built-in slash commands you can use:
   </p>
   
-  <div style="display: flex; flex-direction: column; gap: 12px;">
+  <div class="help-commands-list">
     ${slashCommandsData.map(cmd => `
-      <div style="background: var(--vscode-input-background); padding: 12px; border-radius: 8px; border-left: 3px solid var(--theme-brand-primary);">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-          <span style="font-size: 16px;">${cmd.icon}</span>
-          <strong style="color: var(--theme-brand-primary); font-family: var(--vscode-editor-font-family);">${cmd.command}</strong>
-        </div>
-        <div style="color: var(--vscode-descriptionForeground); font-size: 13px; margin-left: 24px;">
-          ${cmd.description}
-        </div>
+      <div class="help-command-item">
+        <span class="help-command-icon">${cmd.icon}</span>
+        <span class="help-command-name">${cmd.command}</span>
+        <span class="help-command-description">${cmd.description}</span>
       </div>
     `).join('')}
   </div>
@@ -544,9 +569,33 @@ function showHelpMessage() {
   </div>
 </div>
   `.trim();
-  
+
   // Add assistant response with help content
-  addMessage("assistant", helpContent);
+  const assistantMessageHtml = `
+    <div class="message assistant" data-message-id="assistant-${messageId}">
+      <div class="message-header">
+        <div class="message-avatar">C</div>
+        <span>Claude</span>
+        <span>•</span>
+        <span>${time}</span>
+      </div>
+      <div class="message-content-wrapper">
+        <div class="message-content">${helpContent}</div>
+        <button class="message-copy-btn" onclick="copyMessage('assistant-${messageId}')" title="Copy message">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Add both messages to the container
+  messagesContainer.insertAdjacentHTML("beforeend", userMessageHtml);
+  messagesContainer.insertAdjacentHTML("beforeend", assistantMessageHtml);
+  
+  // Scroll to bottom
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
 function sendMessage() {

@@ -1777,6 +1777,64 @@ body {
     opacity: 1 !important;
 }
 
+/* Help Command Styling */
+.help-commands-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.help-command-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--vscode-input-background);
+  border-radius: 6px;
+  border-left: 3px solid var(--theme-brand-primary);
+  line-height: 1.4;
+}
+
+.help-command-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.help-command-name {
+  color: var(--theme-brand-primary);
+  font-family: var(--vscode-editor-font-family);
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+
+.help-command-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: 13px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+@media (max-width: 768px) {
+  .help-command-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 4px;
+}
+  
+  .help-command-name {
+    margin-left: 22px;
+  }
+  
+  .help-command-description {
+    margin-left: 22px;
+    font-size: 12px;
+  }
+}
+
 .slash-command-item {
     display: flex;
     align-items: center;
