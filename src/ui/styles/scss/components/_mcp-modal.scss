@@ -1,0 +1,419 @@
+// ============================================
+// MCP Modal Component
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+// Modal Overlay
+.mcp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: $bg-overlay;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-modal;
+  backdrop-filter: blur(20px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all $transition-slow $easing-default;
+  
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+    
+    .mcp-modal {
+      transform: scale(1) translateY(0);
+    }
+  }
+}
+
+// Main Modal Container
+.mcp-modal {
+  background: $bg-elevated;
+  border: 1px solid $border-secondary;
+  border-radius: $radius-xl;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: $shadow-xl;
+  transform: scale(0.9) translateY(-20px);
+  transition: transform $transition-slow $easing-out;
+  overflow: hidden;
+  
+  &.mcp-form-modal {
+    max-width: 520px;
+    width: 95%;
+  }
+  
+  @include respond-to('md') {
+    max-width: 95%;
+    max-height: 90vh;
+  }
+}
+
+// Modal Header
+.mcp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg;
+  border-bottom: 1px solid $border-subtle;
+  background: linear-gradient(180deg, 
+    $surface-primary 0%, 
+    $bg-elevated 100%);
+}
+
+.mcp-modal-title {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $text-primary;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  
+  &::before {
+    content: '';
+    width: 4px;
+    height: 24px;
+    background: $brand-gradient;
+    border-radius: $radius-full;
+  }
+}
+
+// Close Button
+.mcp-close-button {
+  @include button-base($spacing-sm, $spacing-sm);
+  @include hover-lift(-1px);
+  background: $surface-primary;
+  border: 1px solid $border-secondary;
+  color: $text-secondary;
+  width: 36px;
+  height: 36px;
+  
+  &:hover {
+    background: $state-error-bg;
+    border-color: $state-error;
+    color: $state-error;
+    transform: rotate(90deg);
+  }
+}
+
+// Modal Content
+.mcp-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-lg;
+  @include custom-scrollbar(8px);
+}
+
+// Sections
+.mcp-section {
+  margin-bottom: $spacing-xl;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.mcp-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.mcp-section-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.mcp-section-status {
+  @include status-badge($surface-secondary, $text-tertiary);
+  
+  &.configured {
+    background: $state-success-bg;
+    color: $state-success;
+  }
+}
+
+// Add Server Button
+.mcp-add-server-btn {
+  @include button-primary;
+  width: 100%;
+  gap: $spacing-sm;
+  
+  &::before {
+    content: '+';
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+  }
+}
+
+// Server Grids
+.mcp-servers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+  
+  @include respond-to('md') {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mcp-configured-servers {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+// Server Cards
+.mcp-server-card {
+  @include card($spacing-lg);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: $brand-gradient;
+    transform: scaleX(0);
+    transition: transform $transition-normal $easing-out;
+  }
+  
+  &:hover {
+    border-color: rgba(255, 107, 53, 0.3);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.15);
+    
+    &::before {
+      transform: scaleX(1);
+    }
+  }
+  
+  &.installed {
+    background: $state-info-bg;
+    border-color: $state-info;
+  }
+}
+
+// Server Icon
+.mcp-server-icon {
+  @include flex-center;
+  width: 48px;
+  height: 48px;
+  border-radius: $radius-md;
+  background: $brand-gradient;
+  color: $text-inverse;
+  font-weight: $font-weight-bold;
+  font-size: $font-size-xl;
+  margin-bottom: $spacing-md;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.25);
+}
+
+.mcp-server-name {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $text-primary;
+  margin-bottom: $spacing-sm;
+}
+
+.mcp-server-description {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  line-height: $line-height-relaxed;
+  margin-bottom: 0;
+}
+
+// Install Status
+.mcp-install-status {
+  @include status-badge($surface-secondary, $text-tertiary);
+  position: absolute;
+  top: $spacing-md;
+  right: $spacing-md;
+  gap: $spacing-xs;
+  
+  &.installed {
+    background: $state-success-bg;
+    color: $state-success;
+    
+    &::before {
+      content: '✓';
+      font-size: 10px;
+    }
+  }
+  
+  &.installing {
+    background: $state-info-bg;
+    color: $state-info;
+    
+    &::after {
+      content: '';
+      width: 4px;
+      height: 4px;
+      background: currentColor;
+      border-radius: 50%;
+      animation: pulseDot 1.5s infinite;
+    }
+  }
+}
+
+// Configured Server Cards
+.mcp-configured-server {
+  @include card($spacing-lg);
+  position: relative;
+}
+
+.mcp-configured-server-info {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.mcp-configured-server-icon {
+  @include flex-center;
+  width: 24px;
+  height: 24px;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $state-success;
+  border: none;
+  transition: all $transition-normal $easing-default;
+  
+  svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+  
+  .mcp-configured-server:hover & {
+    background: rgba(74, 222, 128, 0.15);
+    border-color: rgba(74, 222, 128, 0.4);
+    transform: scale(1.05);
+  }
+}
+
+.mcp-configured-server-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.mcp-configured-server-name {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $text-primary;
+  margin: 0;
+}
+
+.mcp-configured-server-actions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.mcp-configured-action-btn {
+  @include button-base($spacing-xs, $spacing-sm);
+  border: 1px solid $border-secondary;
+  background: $surface-primary;
+  color: $text-secondary;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  
+  &:hover {
+    background: $surface-hover;
+    border-color: $border-primary;
+    color: $text-primary;
+  }
+  
+  &.delete {
+    background: $state-error-bg;
+    color: $state-error;
+    border-color: $state-error;
+    
+    &:hover {
+      background: $state-error;
+      color: $text-inverse;
+    }
+  }
+}
+
+// Connection Type Badge
+.mcp-connection-type {
+  @include status-badge(rgba(255, 107, 53, 0.1), $brand-primary);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  display: inline-block;
+  margin-bottom: $spacing-md;
+}
+
+// Server Details
+.mcp-configured-server-details {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.mcp-configured-server-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+}
+
+.mcp-configured-server-label {
+  font-weight: $font-weight-medium;
+  min-width: 100px;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+}
+
+.mcp-configured-server-value {
+  font-family: $font-family-mono;
+  background: $bg-primary;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $text-primary;
+  word-break: break-all;
+}
+
+// Empty State
+.mcp-no-servers {
+  text-align: center;
+  color: $text-tertiary;
+  font-style: italic;
+  padding: $spacing-2xl $spacing-lg;
+  background: $surface-primary;
+  border-radius: $radius-lg;
+  border: 1px dashed $border-secondary;
+}
+
+// Loading State
+.mcp-loading {
+  @include flex-center;
+  padding: $spacing-2xl;
+  color: $text-secondary;
+  
+  &::after {
+    @include loading-spinner(24px, $brand-primary);
+    margin-left: $spacing-sm;
+  }
+}

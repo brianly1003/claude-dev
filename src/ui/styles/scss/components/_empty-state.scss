@@ -1,0 +1,70 @@
+// ============================================
+// Empty State Component
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+.empty-state {
+  flex: 1;
+  @include flex-center(column, 0);
+  color: $text-secondary;
+  text-align: center;
+  padding: 40px $spacing-lg;
+}
+
+.empty-state-logo {
+  @include flex-center;
+  width: 80px;
+  height: 80px;
+  background: $brand-gradient;
+  border-radius: $radius-full;
+  color: $text-inverse;
+  font-weight: $font-weight-bold;
+  font-size: 36px;
+  margin-bottom: $spacing-lg;
+  box-shadow: $shadow-brand;
+  animation: float 3s ease-in-out infinite;
+}
+
+.empty-state h2 {
+  margin: 0 0 $spacing-md 0;
+  font-size: $font-size-2xl;
+  background: $brand-gradient;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.empty-state p {
+  margin: 0 0 $spacing-md 0;
+  line-height: 1.6;
+  opacity: 0.8;
+}
+
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: $spacing-lg 0;
+  text-align: left;
+  max-width: 300px;
+  
+  li {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-sm 0;
+    color: $text-secondary;
+  }
+}
+
+.feature-icon {
+  @include flex-center;
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-sm;
+  background: rgba(255, 107, 53, 0.1);
+  color: $brand-primary;
+  font-size: $font-size-sm;
+}

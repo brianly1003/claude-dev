@@ -1,0 +1,275 @@
+// ============================================
+// Control Components (Dropdowns, Selects)
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+.compact-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-xs 0 $spacing-xs;
+  width: 100%;
+  min-height: 32px;
+  position: relative;
+  flex-wrap: wrap;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  }
+  
+  @include respond-to('xs') {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-xs 0 $spacing-xs;
+  }
+}
+
+.compact-controls-left {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 1;
+  min-width: 0;
+  
+  @include respond-to('xs') {
+    justify-content: center;
+  }
+}
+
+.compact-controls-right {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+  
+  @include respond-to('xs') {
+    justify-content: center;
+  }
+}
+
+.dropdown-group {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 180px;
+  
+  @include respond-to('xs') {
+    gap: $spacing-xs;
+    max-width: none;
+    flex: 1;
+  }
+}
+
+.dropdown-label {
+  font-size: 11px;
+  color: $text-secondary;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  
+  @include respond-to('xs') {
+    font-size: 10px;
+  }
+}
+
+// Select and Model Button Styles
+.compact-select,
+.model-select-button {
+  @include glass-effect(0.06);
+  color: $text-primary;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: $radius-sm;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all $transition-normal $easing-default;
+  min-width: 70px;
+  max-width: 140px;
+  height: 30px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: $brand-primary;
+    transition: width 0.3s ease;
+  }
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    
+    &::after {
+      width: 100%;
+    }
+  }
+  
+  &:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  @include respond-to('xs') {
+    min-width: 60px;
+    font-size: 11px;
+    height: $button-height-sm;
+    padding: $spacing-xs $spacing-sm;
+  }
+}
+
+.model-select-button {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  justify-content: space-between;
+  
+  svg {
+    opacity: 1;
+    transition: transform $transition-normal $easing-default;
+    flex-shrink: 0;
+    width: $icon-size-sm;
+    height: $icon-size-sm;
+  }
+  
+  &:hover svg {
+    opacity: 0.7;
+  }
+}
+
+// Control Groups (Model Selection, etc.)
+.model-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+  padding: $spacing-md $spacing-md;
+  background: $bg-primary;
+  border: 1px solid var(--vscode-input-border);
+  border-radius: $radius-md;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 0;
+  flex-shrink: 0;
+  
+  label {
+    font-size: 0.9em;
+    color: $text-secondary;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+  }
+}
+
+.control-select {
+  background: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border: 1px solid var(--vscode-dropdown-border);
+  border-radius: $radius-sm;
+  padding: $spacing-xs $spacing-sm;
+  font-size: 0.9em;
+  min-width: 80px;
+  cursor: pointer;
+  
+  &:focus {
+    outline: none;
+    border-color: $brand-primary;
+    box-shadow: 0 0 0 1px $brand-primary;
+  }
+}
+
+// Token Counter (legacy)
+.token-counter {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: var(--vscode-badge-background);
+  border-radius: $radius-sm;
+  border: 1px solid var(--vscode-inputOption-activeBorder);
+  font-size: 0.8em;
+  color: var(--vscode-badge-foreground);
+  white-space: nowrap;
+  margin-left: auto;
+  
+  &.has-warning {
+    border-color: $state-warning;
+    background: $state-warning-bg;
+  }
+  
+  &.has-error {
+    border-color: $state-error;
+    background: $state-error-bg;
+  }
+  
+  &.updating .token-count {
+    color: var(--vscode-progressBar-background);
+  }
+  
+  &[title] {
+    cursor: help;
+  }
+}
+
+.token-count {
+  font-size: 0.8em;
+  font-weight: $font-weight-semibold;
+  color: var(--vscode-badge-foreground);
+  min-width: 20px;
+  text-align: center;
+  
+  &.total {
+    color: var(--vscode-badge-foreground);
+    font-weight: $font-weight-bold;
+  }
+  
+  &.warning {
+    color: $state-warning;
+    animation: warningPulse 2s infinite;
+  }
+  
+  &.error {
+    color: $state-error;
+    animation: errorPulse 2s infinite;
+  }
+}
+
+.token-unit {
+  font-size: 0.75em;
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0.8;
+  margin-left: 2px;
+}

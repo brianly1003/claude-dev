@@ -1,0 +1,61 @@
+// ============================================
+// Header Component
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+.chat-header {
+  @include flex-center(row, $spacing-sm);
+  justify-content: center;
+  padding: $spacing-sm $spacing-md;
+  background: var(--vscode-titleBar-activeBackground);
+  border-bottom: 1px solid $border-primary;
+  backdrop-filter: blur(10px);
+  height: $header-height;
+}
+
+.chat-title {
+  @include flex-center(row, $spacing-md);
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-lg;
+}
+
+.claude-logo {
+  @include flex-center;
+  width: 22px;
+  height: 22px;
+  background: $brand-gradient;
+  border-radius: $radius-full;
+  color: $text-inverse;
+  font-weight: $font-weight-bold;
+  font-size: $font-size-sm;
+  box-shadow: $shadow-brand;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  background: $state-success;
+  border-radius: $radius-full;
+  animation: pulse 2s infinite;
+}
+
+.mcp-header-btn {
+  @include button-base($spacing-sm, $spacing-sm);
+  background: $button-secondary-bg;
+  color: var(--vscode-button-secondaryForeground);
+  border-radius: $radius-sm;
+  
+  &:hover {
+    background: $brand-primary;
+    color: $text-inverse;
+    transform: scale(1.05);
+  }
+  
+  .mcp-btn-text {
+    font-size: $font-size-md;
+    font-weight: $font-weight-medium;
+  }
+}

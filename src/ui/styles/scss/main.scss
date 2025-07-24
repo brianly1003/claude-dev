@@ -1,0 +1,28 @@
+// ============================================
+// Main SCSS File - Claude Dev UI (Modern Syntax)
+// ============================================
+
+// 1. Abstracts (Forward for use in other files)
+@use 'abstracts/variables' as *;
+@use 'abstracts/mixins' as *;
+@use 'abstracts/animations' as *;
+
+// 2. Base
+@use 'base/reset';
+
+// 3. Layout
+@use 'layout/header';
+@use 'layout/responsive';
+
+// 4. Components
+@use 'components/buttons';
+@use 'components/messages';
+@use 'components/input';
+@use 'components/controls';
+@use 'components/modals';
+@use 'components/dropdown';
+@use 'components/todo';
+@use 'components/empty-state';
+@use 'components/help';
+@use 'components/mcp-modal';
+@use 'components/mcp-forms';

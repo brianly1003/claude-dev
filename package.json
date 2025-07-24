@@ -59,13 +59,23 @@
         },
         "claudeDev.model": {
           "type": "string",
-          "enum": ["default", "opus", "sonnet"],
+          "enum": [
+            "default",
+            "opus",
+            "sonnet"
+          ],
           "default": "default",
           "description": "Claude model to use: default, opus, or sonnet"
         },
         "claudeDev.thinkingMode": {
           "type": "string",
-          "enum": ["none", "think", "think-hard", "think-harder", "ultrathink"],
+          "enum": [
+            "none",
+            "think",
+            "think-hard",
+            "think-harder",
+            "ultrathink"
+          ],
           "default": "none",
           "description": "Thinking intensity mode for Claude responses"
         }
@@ -153,9 +163,12 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile && npm run build:css",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "build:css": "node build-scss.js",
+    "watch:css": "chokidar 'src/ui/styles/scss/**/*.scss' -c 'npm run build:css'",
+    "dev": "npm run watch & npm run watch:css"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "latest",
@@ -164,6 +177,8 @@
   "devDependencies": {
     "@types/node": "^16.x",
     "@types/vscode": "^1.74.0",
+    "chokidar-cli": "^3.0.0",
+    "sass": "^1.89.2",
     "typescript": "^4.9.4"
   }
 }

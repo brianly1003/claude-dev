@@ -1,0 +1,61 @@
+// ============================================
+// Help Commands Component
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+.help-commands-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin: $spacing-md 0;
+}
+
+.help-command-item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: var(--vscode-input-background);
+  border-radius: $radius-sm;
+  border-left: 3px solid $brand-primary;
+  line-height: 1.4;
+  
+  @include respond-to('xs') {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: $spacing-xs;
+  }
+}
+
+.help-command-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.help-command-name {
+  color: $brand-primary;
+  font-family: $font-family-mono;
+  font-weight: $font-weight-semibold;
+  font-size: 13px;
+  flex-shrink: 0;
+  min-width: fit-content;
+  
+  @include respond-to('xs') {
+    margin-left: 22px;
+  }
+}
+
+.help-command-description {
+  color: $text-secondary;
+  font-size: 13px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  
+  @include respond-to('xs') {
+    margin-left: 22px;
+    font-size: $font-size-sm;
+  }
+}

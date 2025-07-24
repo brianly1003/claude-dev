@@ -1,0 +1,151 @@
+// ============================================
+// MCP Form Components
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+// Server Form
+.mcp-server-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.mcp-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.mcp-form-label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  
+  .required {
+    color: $state-error;
+  }
+}
+
+.mcp-form-input,
+.mcp-form-select,
+.mcp-form-textarea {
+  @include input-field;
+  
+  &.mcp-form-textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: $font-family-mono;
+  }
+}
+
+.mcp-form-hint {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+// Advanced Section
+.mcp-advanced-section {
+  border: 1px solid $border-primary;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  
+  &.expanded .mcp-chevron {
+    transform: rotate(90deg);
+  }
+  
+  &.expanded .mcp-advanced-content {
+    display: block;
+    animation: expandDown 0.2s ease;
+  }
+}
+
+.mcp-advanced-toggle {
+  @include button-base($spacing-md, $spacing-md);
+  width: 100%;
+  background: $button-secondary-bg;
+  color: var(--vscode-button-secondaryForeground);
+  font-size: 13px;
+  font-weight: $font-weight-medium;
+  gap: $spacing-sm;
+  justify-content: flex-start;
+  
+  &:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+  }
+}
+
+.mcp-chevron {
+  transition: transform $transition-normal $easing-default;
+}
+
+.mcp-advanced-content {
+  display: none;
+  padding: $spacing-md;
+  background: $bg-primary;
+  border-top: 1px solid $border-primary;
+}
+
+// Form Error
+.mcp-form-error {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid #F87171;
+  color: #DC2626;
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  font-size: 13px;
+  margin-top: -8px;
+}
+
+// Form Actions
+.mcp-form-actions {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $border-subtle;
+}
+
+.mcp-form-btn {
+  flex: 1;
+  @include button-base($spacing-sm, $spacing-lg);
+  font-size: $font-size-md;
+  
+  &.primary {
+    @include button-primary;
+  }
+  
+  &.secondary {
+    @include button-secondary;
+  }
+}
+
+// Specific Form Button Variants
+.mcp-form-cancel {
+  @include button-secondary;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.mcp-form-submit {
+  @include button-primary;
+  min-width: 100px;
+  justify-content: center;
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.mcp-btn-spinner {
+  animation: spin 1s linear infinite;
+}

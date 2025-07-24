@@ -1,0 +1,451 @@
+// ============================================
+// Responsive Layout
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// Small Mobile Devices (320px - 479px)
+@include respond-to('xs') {
+  .input-container {
+    padding: $spacing-sm $spacing-md;
+    min-height: 76px;
+    gap: $spacing-xs;
+  }
+  
+  .input-row {
+    padding: 10px $spacing-md;
+    min-height: 44px;
+  }
+  
+  #messageInput {
+    font-size: 14px;
+    min-height: 22px;
+    max-height: 100px;
+  }
+  
+  .send-button {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .send-icon {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .compact-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-xs 0 $spacing-xs;
+  }
+  
+  .compact-controls-left,
+  .compact-controls-right {
+    justify-content: center;
+  }
+  
+  .dropdown-group {
+    gap: $spacing-xs;
+    max-width: none;
+    flex: 1;
+  }
+  
+  .dropdown-label {
+    font-size: 10px;
+  }
+  
+  .compact-select, .model-select-button {
+    min-width: 60px;
+    max-width: none;
+    font-size: 11px;
+    height: $button-height-sm;
+    padding: $spacing-xs $spacing-sm;
+  }
+  
+  .compact-button {
+    width: $button-height-sm;
+    height: $button-height-sm;
+    padding: $spacing-xs;
+  }
+  
+  .compact-button svg {
+    width: $icon-size-sm;
+    height: $icon-size-sm;
+  }
+  
+  .token-display-large {
+    font-size: 11px;
+    padding: $spacing-xs $spacing-sm;
+  }
+  
+  .token-label {
+    font-size: 10px;
+  }
+}
+
+// Mobile Devices (480px - 767px)
+@include breakpoint('sm') {
+  .input-container {
+    padding: $spacing-sm 10px;
+    min-height: 58px;
+  }
+  
+  .dropdown-group {
+    gap: 3px;
+    min-width: 0;
+    max-width: 90px;
+  }
+  
+  .dropdown-label {
+    display: block;
+    font-size: 8px;
+  }
+  
+  .model-select-button {
+    min-width: 56px;
+    max-width: 85px;
+    font-size: 10px;
+    height: 24px;
+    padding: 3px $spacing-xs;
+  }
+
+  .compact-select {
+    min-width: 92px;
+    max-width: 100px;
+    font-size: 10px;
+    height: 24px;
+    padding: 3px $spacing-xs;
+  }
+  
+  .compact-button {
+    width: 24px;
+    height: 24px;
+    padding: 3px;
+  }
+  
+  .compact-button svg {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .token-display-large {
+    font-size: 11px;
+    padding: 3px 7px;
+  }
+  
+  .token-label {
+    font-size: 9px;
+  }
+  
+  .input-row {
+    padding: 7px 9px;
+  }
+  
+  #messageInput {
+    font-size: 13px;
+    min-height: 19px;
+    max-height: 90px;
+  }
+  
+  .send-button {
+    width: 25px;
+    height: 25px;
+  }
+  
+  .send-icon {
+    width: $icon-size-sm;
+    height: $icon-size-sm;
+  }
+}
+
+// Tablet Portrait (768px - 1023px)
+@include breakpoint('md') {
+  .input-container {
+    padding: 10px 14px;
+  }
+  
+  .dropdown-group {
+    gap: $spacing-xs;
+    max-width: 140px;
+  }
+  
+  .dropdown-label {
+    display: block;
+    font-size: 9px;
+  }
+  
+  .compact-select {
+    min-width: 108px;
+    max-width: 130px;
+    font-size: 11px;
+    height: 26px;
+  }
+
+  .model-select-button {
+    min-width: 60px;
+    max-width: 130px;
+    font-size: 11px;
+    height: 26px;
+  }
+  
+  .compact-button {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .compact-button svg {
+    width: $icon-size-sm;
+    height: $icon-size-sm;
+  }
+  
+  .token-display-large {
+    font-size: $font-size-sm;
+    padding: 5px 10px;
+  }
+  
+  #messageInput {
+    font-size: 14px;
+    min-height: 20px;
+    max-height: 100px;
+  }
+  
+  .send-button {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .send-icon {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+// Desktop and Large Screens (1024px+)
+@include breakpoint('lg') {
+  .input-container {
+    padding: 10px $spacing-md;
+  }
+  
+  .dropdown-group {
+    gap: $spacing-xs;
+    max-width: 160px;
+  }
+  
+  .dropdown-label {
+    display: block;
+    font-size: 10px;
+  }
+  
+  .compact-select, .model-select-button {
+    min-width: 70px;
+    max-width: 140px;
+    font-size: 11px;
+    height: $button-height-sm;
+  }
+  
+  .compact-button {
+    width: $button-height-sm;
+    height: $button-height-sm;
+    padding: $spacing-xs;
+  }
+  
+  .compact-button svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .token-display-large {
+    font-size: 13px;
+    padding: $spacing-xs $spacing-md;
+  }
+  
+  .input-row {
+    padding: $spacing-sm $spacing-md;
+    gap: $spacing-sm;
+  }
+  
+  #messageInput {
+    font-size: 14px;
+    min-height: 20px;
+    max-height: 100px;
+  }
+  
+  .send-button {
+    width: $button-height-sm;
+    height: $button-height-sm;
+  }
+  
+  .send-icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+// Ultra Wide Screens (1440px+)
+@include breakpoint('xl') {
+  .dropdown-group {
+    gap: $spacing-sm;
+    max-width: 200px;
+  }
+  
+  .dropdown-label {
+    font-size: 11px;
+  }
+  
+  .compact-select, .model-select-button {
+    min-width: 80px;
+    max-width: 180px;
+    font-size: $font-size-sm;
+    height: 30px;
+    padding: $spacing-xs 10px;
+  }
+  
+  .compact-button {
+    width: 30px;
+    height: 30px;
+    padding: 7px;
+  }
+  
+  .compact-button svg {
+    width: $icon-size;
+    height: $icon-size;
+  }
+  
+  .token-display-large {
+    font-size: 14px;
+    padding: 7px 14px;
+  }
+  
+  .token-label {
+    font-size: 13px;
+  }
+  
+  .input-row {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  
+  #messageInput {
+    font-size: 15px;
+  }
+  
+  .send-button {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .send-icon {
+    width: $icon-size;
+    height: $icon-size;
+  }
+}
+
+// High DPI / Retina Display Adjustments
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .compact-button, .compact-select, .model-select-button {
+    border-width: 0.5px;
+  }
+  
+  .input-wrapper {
+    border-width: 1.5px;
+  }
+}
+
+// Landscape Mobile Devices
+@media (max-height: 500px) and (orientation: landscape) {
+  .input-container {
+    padding: $spacing-xs $spacing-sm;
+    min-height: 48px;
+  }
+  
+  .compact-controls {
+    margin-bottom: $spacing-xs;
+    gap: 3px;
+    min-height: 22px;
+  }
+  
+  .compact-select, .model-select-button, .compact-button {
+    height: 20px;
+  }
+  
+  .compact-select, .model-select-button {
+    font-size: 9px;
+    padding: 2px 5px;
+    min-width: 40px;
+    max-width: 70px;
+  }
+  
+  .compact-button {
+    width: 20px;
+    padding: 2px;
+  }
+  
+  .compact-button svg {
+    width: 9px;
+    height: 9px;
+  }
+  
+  .token-display-large {
+    font-size: 10px;
+    padding: 3px $spacing-xs;
+  }
+  
+  .token-label {
+    font-size: 9px;
+  }
+  
+  .dropdown-label {
+    display: none;
+  }
+  
+  .input-row {
+    padding: $spacing-xs $spacing-xs;
+    gap: $spacing-xs;
+  }
+  
+  #messageInput {
+    font-size: $font-size-sm;
+    min-height: 16px;
+    max-height: 60px;
+  }
+  
+  .send-button {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .send-icon {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+// Touch Device Improvements
+@media (pointer: coarse) {
+  .compact-button, .compact-select, .model-select-button {
+    min-height: $button-height-sm;
+    min-width: $button-height-sm;
+  }
+  
+  .compact-select, .model-select-button {
+    padding: $spacing-xs $spacing-sm;
+  }
+  
+  .send-button {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+// Reduced Motion Preferences
+@media (prefers-reduced-motion: reduce) {
+  .compact-button, .compact-select, .model-select-button, .send-button {
+    transition: none;
+  }
+  
+  .send-icon {
+    transition: none;
+  }
+}

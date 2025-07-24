@@ -1,0 +1,181 @@
+// ============================================
+// Button Components
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+// Send Button
+.send-button {
+  @include flex-center;
+  width: $button-height;
+  height: $button-height;
+  background: $brand-gradient;
+  color: $text-inverse;
+  border: none;
+  border-radius: $radius-full;
+  cursor: pointer;
+  transition: all $transition-normal $easing-default;
+  box-shadow: $shadow-brand;
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 2px;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+  }
+  
+  &:disabled {
+    background: $button-secondary-bg;
+    color: var(--vscode-button-secondaryForeground);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  &.stop-mode {
+    background: $state-error;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    
+    &:hover:not(:disabled) {
+      background: $button-danger-hover;
+      box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+      
+      .stop-icon {
+        transform: scale(1.1);
+      }
+    }
+  }
+  
+  @include respond-to('xs') {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.send-icon,
+.stop-icon {
+  width: $icon-size;
+  height: $icon-size;
+  transition: transform $transition-normal $easing-default;
+  
+  @include respond-to('xs') {
+    width: $icon-size-sm;
+    height: $icon-size-sm;
+  }
+}
+
+.send-button:hover:not(:disabled) .send-icon {
+  transform: translateX(1px);
+}
+
+// Compact Buttons
+.compact-button {
+  @include button-base($spacing-xs, $spacing-xs);
+  
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  width: 30px;
+  height: 30px;
+  position: relative;
+  overflow: hidden;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  svg {
+    width: $icon-size-sm;
+    height: $icon-size-sm;
+    transition: all $transition-normal $easing-default;
+    z-index: 1;
+  }
+  
+  &:hover svg {
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.12);
+  }
+  
+  @include respond-to('xs') {
+    width: $button-height-sm;
+    height: $button-height-sm;
+    padding: $spacing-xs;
+  }
+}
+
+// Specific Compact Button Variants - Minimal Gray Theme
+#newChatButton,
+#historyButton,
+#mcpServerBtn {
+  // Inherit the base compact-button styles
+  // No additional colors - just subtle gray variations
+  
+  svg {
+    color: rgba(255, 255, 255, 0.6);
+    transition: color $transition-normal $easing-default;
+  }
+  
+  &:hover svg {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+// History Button
+.history-button {
+  @include button-base($spacing-xs + 2px, $spacing-md);
+  background: $button-secondary-bg;
+  color: var(--vscode-button-secondaryForeground);
+  border-radius: $radius-sm;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  gap: $spacing-xs;
+  
+  &:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+    transform: translateY(-1px);
+  }
+}
+
+// Message Copy Button
+.message-copy-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: transparent;
+  border: 1px solid var(--vscode-sideBarSectionHeader-border);
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  padding: $spacing-xs;
+  border-radius: $radius-sm;
+  opacity: 1;
+  transition: all $transition-normal $easing-default;
+  @include flex-center;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  
+  &:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+    color: $text-primary;
+  }
+  
+  &.copied {
+    color: $state-success;
+    opacity: 1;
+    
+    &:hover {
+      color: $state-success;
+    }
+  }
+}

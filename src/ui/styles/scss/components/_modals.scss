@@ -1,0 +1,201 @@
+// ============================================
+// Modal Components
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+@use '../abstracts/animations' as *;
+
+// History Modal
+.history-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  
+  &.visible {
+    display: flex;
+  }
+}
+
+.history-modal {
+  background: $bg-primary;
+  border: 1px solid $border-primary;
+  border-radius: $radius-md;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $border-primary;
+  background: $bg-secondary;
+}
+
+.history-header-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.history-clear-all-btn {
+  @include button-base($spacing-xs, $spacing-md);
+  background: rgba(248, 113, 113, 0.1);
+  color: $state-error;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  gap: $spacing-xs;
+  
+  &:hover {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: rgba(248, 113, 113, 0.4);
+    transform: translateY(-1px);
+  }
+}
+
+.history-modal-title {
+  margin: 0;
+  font-size: 1.1em;
+  color: $text-primary;
+}
+
+.history-close-button {
+  background: none;
+  border: none;
+  color: $text-primary;
+  cursor: pointer;
+  padding: $spacing-xs;
+  border-radius: $radius-sm;
+  transition: background-color 0.1s ease;
+  
+  &:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+  }
+}
+
+.history-search-container {
+  position: relative;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1px solid $border-primary;
+  background: $bg-primary;
+}
+
+.history-search-input {
+  @include input-field;
+  width: 100%;
+  padding-left: 36px;
+}
+
+.history-search-icon {
+  position: absolute;
+  left: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--vscode-input-placeholderForeground);
+  pointer-events: none;
+}
+
+.history-modal-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-conversation-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-sm;
+  @include custom-scrollbar;
+}
+
+.history-loading {
+  text-align: center;
+  padding: 40px $spacing-lg;
+  color: $text-secondary;
+}
+
+.history-conversation-item {
+  @include card($spacing-md);
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: $spacing-sm;
+  position: relative;
+}
+
+.history-conversation-content {
+  flex: 1;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-delete-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: $spacing-xs;
+  border-radius: $radius-sm;
+  transition: all $transition-normal $easing-default;
+  @include flex-center;
+  margin-left: $spacing-sm;
+  opacity: 0;
+  flex-shrink: 0;
+  
+  .history-conversation-item:hover & {
+    opacity: 1;
+  }
+  
+  &:hover {
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+    transform: scale(1.1);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.history-conversation-title {
+  font-weight: $font-weight-semibold;
+  color: $text-primary;
+  margin-bottom: $spacing-xs;
+  font-size: 0.95em;
+}
+
+.history-conversation-meta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  font-size: 0.8em;
+  color: $text-secondary;
+  margin-bottom: $spacing-xs;
+}
+
+.history-conversation-last {
+  font-size: 0.85em;
+  color: $text-secondary;
+  font-style: italic;
+}
+
+.history-conversation-cost {
+  color: $brand-primary;
+  font-weight: $font-weight-semibold;
+}

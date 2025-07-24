@@ -20,7 +20,9 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(grep:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:css:*)"
     ],
     "deny": []
   }

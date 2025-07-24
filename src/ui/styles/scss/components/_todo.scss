@@ -1,0 +1,97 @@
+// ============================================
+// Todo List Component
+// ============================================
+
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
+.todo-container {
+  margin: $spacing-sm 0;
+  font-family: $font-family;
+}
+
+.todo-header {
+  margin-bottom: $spacing-md;
+}
+
+.todo-title {
+  color: $text-primary;
+  font-size: 14px;
+  font-weight: $font-weight-medium;
+  margin: 0 0 $spacing-sm 0;
+}
+
+.todo-stats {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.todo-list {
+  margin-left: $spacing-md;
+}
+
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  margin: $spacing-xs 0;
+  font-size: 14px;
+  line-height: 1.5;
+  
+  &::before {
+    content: '●';
+    color: $text-secondary;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+  
+  &.completed::before {
+    content: '✓';
+    color: var(--vscode-testing-iconPassed);
+  }
+  
+  &.in_progress::before {
+    content: '⚡';
+    color: $brand-primary;
+  }
+}
+
+.todo-content {
+  flex: 1;
+}
+
+.todo-text {
+  color: $text-primary;
+  
+  .todo-item.completed & {
+    text-decoration: line-through;
+    color: $text-secondary;
+  }
+}
+
+.todo-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: $text-secondary;
+}
+
+.todo-priority {
+  &.high {
+    color: #ff6b6b;
+  }
+  
+  &.medium {
+    color: #ffa726;
+  }
+  
+  &.low {
+    color: #66bb6a;
+  }
+}
+
+.todo-progress {
+  margin-top: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+}

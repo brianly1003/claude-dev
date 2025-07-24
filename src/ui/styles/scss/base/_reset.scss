@@ -1,0 +1,35 @@
+// ============================================
+// Base Reset & Global Styles
+// ============================================
+
+@use '../abstracts/variables' as *;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: $font-family;
+  font-size: $font-size-md;
+  color: $text-primary;
+  background: linear-gradient(135deg, $bg-primary 0%, $bg-secondary 100%);
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// Legacy variable mappings for backward compatibility
+:root {
+  --claude-gradient: #{$brand-gradient};
+  --claude-accent: #{$brand-primary};
+  --claude-accent-hover: #{$brand-secondary};
+  --claude-accent-light: rgba(255, 107, 53, 0.1);
+  --claude-shadow: #{$shadow-brand};
+  --border-radius: #{$radius-md};
+  --border-radius-small: #{$radius-sm};
+  --spacing: #{$spacing-md};
+  --animation-duration: #{$transition-normal};
+}

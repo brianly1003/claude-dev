@@ -21,7 +21,7 @@ export class HtmlTemplateService {
       "src",
       "ui",
       "styles",
-      "chat-view.css"
+      "compiled.css"
     );
     const jsPath = vscode.Uri.joinPath(
       this.extensionUri,
