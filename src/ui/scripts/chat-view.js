@@ -1232,6 +1232,10 @@ function updateSelectedItem() {
     .querySelectorAll(".slash-command-item")
     .forEach((item, index) => {
       item.classList.toggle("selected", index === selectedIndex);
+      // Scroll selected item into view for keyboard navigation
+      if (index === selectedIndex) {
+        item.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
     });
 }
 
