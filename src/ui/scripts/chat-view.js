@@ -511,9 +511,56 @@ function handleEditServer(serverName) {
 
 // === Message Functions ===
 
+function showHelpMessage() {
+  // Add user message
+  addMessage("user", "Show all available commands");
+  
+  // Create help content with all available commands
+  const helpContent = `
+<div style="font-family: var(--vscode-font-family); line-height: 1.6;">
+  <h3 style="color: var(--theme-brand-primary); margin-bottom: 16px;">📚 Available Commands</h3>
+  <p style="margin-bottom: 16px; color: var(--vscode-descriptionForeground);">
+    Here are all the built-in slash commands you can use:
+  </p>
+  
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    ${slashCommandsData.map(cmd => `
+      <div style="background: var(--vscode-input-background); padding: 12px; border-radius: 8px; border-left: 3px solid var(--theme-brand-primary);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <span style="font-size: 16px;">${cmd.icon}</span>
+          <strong style="color: var(--theme-brand-primary); font-family: var(--vscode-editor-font-family);">${cmd.command}</strong>
+        </div>
+        <div style="color: var(--vscode-descriptionForeground); font-size: 13px; margin-left: 24px;">
+          ${cmd.description}
+        </div>
+      </div>
+    `).join('')}
+  </div>
+  
+  <div style="margin-top: 20px; padding: 12px; background: rgba(255, 107, 53, 0.1); border-radius: 8px; border: 1px solid rgba(255, 107, 53, 0.3);">
+    <p style="margin: 0; font-size: 13px; color: var(--vscode-foreground);">
+      <strong>💡 Tip:</strong> Type <code>/</code> followed by any command name to use it, or just type <code>/</code> to see the dropdown menu.
+    </p>
+  </div>
+</div>
+  `.trim();
+  
+  // Add assistant response with help content
+  addMessage("assistant", helpContent);
+}
+
 function sendMessage() {
   const message = messageInput.value.trim();
   if (!message || isWaiting) return;
+
+  // Handle /help command locally (it comes as "Show all available commands")
+  if (message === "Show all available commands") {
+    showHelpMessage();
+    messageInput.value = "";
+    autoResize();
+    updateInputTokenCount();
+    return;
+  }
 
   const inputTokens = estimateTokens(message);
   updateTotalTokenCount(inputTokens);
