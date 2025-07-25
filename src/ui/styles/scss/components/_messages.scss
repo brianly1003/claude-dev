@@ -17,7 +17,7 @@
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: $spacing-md;
+  padding: 12px;
   scroll-behavior: smooth;
   @include custom-scrollbar;
 }
