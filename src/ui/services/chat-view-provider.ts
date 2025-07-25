@@ -228,8 +228,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       };
 
       const streamingOptions: StreamingCompletionOptions = {
-        onStreamingUpdate: (partialResponse: string, isComplete: boolean) => {
-          this.handleStreamingUpdate(partialResponse, isComplete);
+        onStreamingUpdate: (partialResponse: string, isComplete: boolean, messageType?: string, thinkingContent?: string) => {
+          this.handleStreamingUpdate(partialResponse, isComplete, messageType, thinkingContent);
         },
       };
 
@@ -458,15 +458,15 @@ Please provide only the enhanced, polished version without any additional explan
     return context;
   }
 
-  private handleStreamingUpdate(partialResponse: string, isComplete: boolean) {
+  private handleStreamingUpdate(partialResponse: string, isComplete: boolean, messageType?: string, thinkingContent?: string) {
     // Don't update if generation has been stopped
     if (!this.isGenerating) {
       return;
     }
-    this.updateStreamingMessage(partialResponse, isComplete);
+    this.updateStreamingMessage(partialResponse, isComplete, messageType, thinkingContent);
   }
 
-  private updateStreamingMessage(content: string, isComplete: boolean) {
+  private updateStreamingMessage(content: string, isComplete: boolean, messageType?: string, thinkingContent?: string) {
     if (!this.streamingMessageId || !this.isGenerating) return;
 
     const currentConversation =
@@ -479,10 +479,16 @@ Please provide only the enhanced, polished version without any additional explan
     );
     if (messageIndex !== -1) {
       currentConversation.messages[messageIndex].content = content;
+      
+      // Store thinking content separately when complete
+      if (isComplete && thinkingContent) {
+        currentConversation.messages[messageIndex].thinkingContent = thinkingContent;
+      }
+      
       currentConversation.metadata.lastActivity = Date.now();
 
       // Send real-time update to webview
-      this.sendStreamingUpdate(this.streamingMessageId, content, isComplete);
+      this.sendStreamingUpdate(this.streamingMessageId, content, isComplete, messageType, thinkingContent);
 
       // Save to storage when complete
       if (isComplete) {
@@ -495,7 +501,9 @@ Please provide only the enhanced, polished version without any additional explan
   private sendStreamingUpdate(
     messageId: string,
     content: string,
-    isComplete: boolean
+    isComplete: boolean,
+    messageType?: string,
+    thinkingContent?: string
   ) {
     if (this._view) {
       this._view.webview.postMessage({
@@ -503,6 +511,8 @@ Please provide only the enhanced, polished version without any additional explan
         messageId: messageId,
         content: content,
         isComplete: isComplete,
+        messageType: messageType,
+        thinkingContent: thinkingContent,
       });
     }
   }

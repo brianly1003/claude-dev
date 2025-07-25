@@ -260,7 +260,11 @@ function hideMCPModal() {
   mcpModal.classList.remove("visible");
 }
 
-function renderPopularServers(configuredTools = [], configuredServers = [], installing = null) {
+function renderPopularServers(
+  configuredTools = [],
+  configuredServers = [],
+  installing = null
+) {
   const popularGrid = document.getElementById("popularServers");
 
   popularGrid.innerHTML = popularServers
@@ -291,7 +295,13 @@ function renderPopularServers(configuredTools = [], configuredServers = [], inst
                 <div class="mcp-install-status ${
                   isInstalled ? "installed" : "installing"
                 } ${installing === server.name ? "installing" : ""}">
-                    ${installing === server.name ? "Installing..." : (isInstalled ? "Installed" : "Install")}
+                    ${
+                      installing === server.name
+                        ? "Installing..."
+                        : isInstalled
+                        ? "Installed"
+                        : "Install"
+                    }
                 </div>
                 <div class="mcp-server-icon">
                     ${server.icon || server.name.charAt(0).toUpperCase()}
@@ -474,7 +484,11 @@ function updateMCPModal(data) {
       '<div class="mcp-no-servers">No MCP servers configured</div>';
   }
 
-  renderPopularServers(data.tools, data.configuredServers || [], data.installing);
+  renderPopularServers(
+    data.tools,
+    data.configuredServers || [],
+    data.installing
+  );
   mcpModal.classList.add("visible");
 }
 
@@ -553,13 +567,17 @@ function showHelpMessage() {
   </p>
   
   <div class="help-commands-list">
-    ${slashCommandsData.map(cmd => `
+    ${slashCommandsData
+      .map(
+        (cmd) => `
       <div class="help-command-item">
         <span class="help-command-icon">${cmd.icon}</span>
         <span class="help-command-name">${cmd.command}</span>
         <span class="help-command-description">${cmd.description}</span>
       </div>
-    `).join('')}
+    `
+      )
+      .join("")}
   </div>
   
   <div style="margin-top: 20px; padding: 12px; background: rgba(255, 107, 53, 0.1); border-radius: 8px; border: 1px solid rgba(255, 107, 53, 0.3);">
@@ -593,7 +611,7 @@ function showHelpMessage() {
   // Add both messages to the container
   messagesContainer.insertAdjacentHTML("beforeend", userMessageHtml);
   messagesContainer.insertAdjacentHTML("beforeend", assistantMessageHtml);
-  
+
   // Scroll to bottom
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
@@ -636,33 +654,33 @@ function stopGeneration() {
   hideTypingIndicator();
 
   vscode.postMessage({
-    type: "stopGeneration"
+    type: "stopGeneration",
   });
 }
 
 function updateSendButtonState() {
-  const sendIcon = sendButton.querySelector('.send-icon');
-  const stopIcon = sendButton.querySelector('.stop-icon');
-  
+  const sendIcon = sendButton.querySelector(".send-icon");
+  const stopIcon = sendButton.querySelector(".stop-icon");
+
   if (isGenerating) {
-    sendButton.classList.add('stop-mode');
+    sendButton.classList.add("stop-mode");
     sendButton.disabled = false;
-    sendIcon.style.display = 'none';
-    stopIcon.style.display = 'block';
-    sendButton.title = 'Stop generation';
+    sendIcon.style.display = "none";
+    stopIcon.style.display = "block";
+    sendButton.title = "Stop generation";
   } else {
-    sendButton.classList.remove('stop-mode');
+    sendButton.classList.remove("stop-mode");
     sendButton.disabled = false;
-    sendIcon.style.display = 'block';
-    stopIcon.style.display = 'none';
-    sendButton.title = 'Send message';
+    sendIcon.style.display = "block";
+    stopIcon.style.display = "none";
+    sendButton.title = "Send message";
   }
 }
 
 function showTypingIndicator() {
   // isGenerating state is now managed by backend messages
   // to ensure it's set as soon as thinking starts
-  
+
   const typingHtml = `
         <div class="typing-indicator">
             <div class="message-avatar" style="background: var(--claude-gradient); color: white;">C</div>
@@ -689,7 +707,7 @@ function hideTypingIndicator() {
   if (typingIndicator) {
     typingIndicator.remove();
   }
-  
+
   isGenerating = false;
   updateSendButtonState();
 }
@@ -736,8 +754,12 @@ function renderMessages(messages) {
       const messageTokens = estimateTokens(msg.content);
       updateTotalTokenCount(messageTokens);
 
-      const isThinking = !isUser && msg.content.trim() === "✱ Thinking...";
+      // Check if this is a thinking message (legacy support)
+      const isThinking = !isUser && (msg.content.trim() === "✱ Thinking..." || msg.content.includes("🧠 Thinking..."));
       const thinkingClass = isThinking ? " thinking-message" : "";
+      
+      // Render thinking section if we have thinking content
+      const thinkingSection = !isUser && msg.thinkingContent ? renderThinkingSection(msg.thinkingContent) : '';
 
       return `
             <div class="message ${msg.role}" data-message-id="${msg.id}">
@@ -748,12 +770,19 @@ function renderMessages(messages) {
                     <span>${time}</span>
                 </div>
                 <div class="message-content-wrapper">
-                    <div class="message-content${thinkingClass}">${content}</div>
-                    ${!isThinking ? `<button class="message-copy-btn" onclick="copyMessage('${msg.id}')" title="Copy message">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                        </svg>
-                    </button>` : ''}
+                    ${thinkingSection}
+                    <div class="final-response-container">
+                        <div class="message-content${thinkingClass}">${content}</div>
+                        ${
+                          !isThinking
+                            ? `<button class="message-copy-btn" onclick="copyMessage('${msg.id}')" title="Copy message">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                            </svg>
+                        </button>`
+                            : ""
+                        }
+                    </div>
                 </div>
             </div>
         `;
@@ -761,6 +790,50 @@ function renderMessages(messages) {
     .join("");
 
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Render thinking section like Cursor
+function renderThinkingSection(thinkingContent, isCollapsed = true) {
+  if (!thinkingContent || !thinkingContent.trim()) {
+    return '';
+  }
+  
+  const thinkingId = 'think-' + Date.now() + Math.random().toString(36).substr(2, 9);
+  const formattedThinking = formatMessageContent(thinkingContent);
+  
+  return `
+    <div class="thinking-section ${isCollapsed ? 'collapsed' : 'expanded'}">
+      <div class="thinking-header" onclick="toggleThinking('${thinkingId}')">
+        <svg class="thinking-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8.59 16.58L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.42z"/>
+        </svg>
+        <span class="thinking-brain-icon">🧠</span>
+        <span class="thinking-title">Thought</span>
+        <span class="thinking-duration">for ${Math.ceil(thinkingContent.length / 100)}s</span>
+      </div>
+      <div class="thinking-content" id="${thinkingId}" ${isCollapsed ? 'style="display: none;"' : ''}>
+        <div class="thinking-content-inner">
+          ${formattedThinking}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Toggle thinking section visibility
+function toggleThinking(thinkingId) {
+  const content = document.getElementById(thinkingId);
+  const section = content.closest('.thinking-section');
+  
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    section.classList.remove('collapsed');
+    section.classList.add('expanded');
+  } else {
+    content.style.display = 'none';
+    section.classList.remove('expanded');
+    section.classList.add('collapsed');
+  }
 }
 
 function formatMessageContent(content) {
@@ -778,14 +851,21 @@ function formatMessageContent(content) {
   // First convert line breaks to proper newlines for regex processing
   let formatted = content.replace(/\\n/g, "\n");
 
-  // Handle code blocks first to protect them from file path processing
+  // Handle code blocks first to protect them from other processing
   formatted = formatted.replace(
-    /\`\`\`([\\s\\S]*?)\`\`\`/g,
-    "<pre><code>$1</code></pre>"
+    /```[\s\S]*?```/g,
+    (match) => {
+      // Extract language and content
+      const lines = match.split('\n');
+      const firstLine = lines[0];
+      const language = firstLine.replace('```', '').trim();
+      const codeContent = lines.slice(1, -1).join('\n');
+      return `<code>${codeContent}</code>`;
+    }
   );
 
-  // Handle inline code
-  formatted = formatted.replace(/\`([^\`]+)\`/g, "<code>$1</code>");
+  // Handle single backticks for inline code (but not inside code blocks)
+  formatted = formatted.replace(/`([^`\n]+)`/g, "<code>$1</code>");
 
   // Format tool usage lines with clickable file paths
   formatted = formatted.replace(
@@ -802,25 +882,29 @@ function formatMessageContent(content) {
     }
   );
 
-  // Now handle standalone file paths - but skip any that are already inside tool-usage divs
-  const toolUsageRegex = /<div class="tool-usage">.*?<\/div>/gs;
-  const parts = formatted.split(toolUsageRegex);
-  const toolUsageParts = formatted.match(toolUsageRegex) || [];
+  // Now handle standalone file paths - but skip any that are already inside tool-usage divs or code blocks
+  const protectedRegex = /(<div class="tool-usage">.*?<\/div>|<pre><code>.*?<\/code><\/pre>|<code>.*?<\/code>)/gs;
+  const parts = formatted.split(protectedRegex);
+  const protectedParts = formatted.match(protectedRegex) || [];
 
-  // Process only the non-tool-usage parts for standalone file paths
+  // Process only the non-protected parts for standalone file paths
   for (let i = 0; i < parts.length; i++) {
-    parts[i] = parts[i].replace(
-      /([\/\\](?:[^\/\\<>:"|?*\s\n]+[\/\\])*[^\/\\<>:"|?*\s\n]+\.[a-zA-Z0-9]+)/g,
-      '<span class="clickable-file-path" onclick="openFile(\'$1\')">$1</span>'
-    );
+    if (!protectedParts.includes(parts[i])) {
+      parts[i] = parts[i].replace(
+        /([\/\\](?:[^\/\\<>:"|?*\s\n]+[\/\\])*[^\/\\<>:"|?*\s\n]+\.[a-zA-Z0-9]+)/g,
+        '<span class="clickable-file-path" onclick="openFile(\'$1\')">$1</span>'
+      );
+    }
   }
 
   // Reconstruct the formatted content
   formatted = "";
+  let protectedIndex = 0;
   for (let i = 0; i < parts.length; i++) {
     formatted += parts[i];
-    if (i < toolUsageParts.length) {
-      formatted += toolUsageParts[i];
+    if (protectedIndex < protectedParts.length && protectedParts[protectedIndex]) {
+      formatted += protectedParts[protectedIndex];
+      protectedIndex++;
     }
   }
 
@@ -837,6 +921,7 @@ function formatMessageContent(content) {
 
   return formatted;
 }
+
 
 function formatTodoList(content) {
   try {
@@ -897,18 +982,18 @@ function formatTodoList(content) {
   }
 }
 
-function updateStreamingMessage(messageId, content, isComplete) {
+function updateStreamingMessage(messageId, content, isComplete, messageType, thinkingContent) {
   // If manually stopped, ignore streaming updates
   if (isManuallyStopped) {
     return;
   }
-  
+
   // Ensure we're in generation state when streaming starts
   if (!isComplete && !isGenerating) {
     isGenerating = true;
     updateSendButtonState();
   }
-  
+
   const existingMessage = messagesContainer.querySelector(
     `[data-message-id="${messageId}"]`
   );
@@ -919,14 +1004,54 @@ function updateStreamingMessage(messageId, content, isComplete) {
     if (contentElement) {
       const formattedContent = formatMessageContent(content);
 
-      const isThinking = content.trim() === "✱ Thinking...";
+      const isThinking = messageType === 'thinking' || content.trim() === "✱ Thinking..." || content.includes("🧠 Thinking...");
 
-      if (isThinking && !isComplete) {
+      if (messageType === 'thinking' && !isComplete) {
+        // Show thinking content in real-time
+        const wrapper = existingMessage.querySelector(".message-content-wrapper");
+        let thinkingSection = wrapper.querySelector(".thinking-section");
+        
+        if (!thinkingSection) {
+          // Create thinking section if it doesn't exist
+          const thinkingSectionHTML = renderThinkingSection(content, false); // Show expanded during streaming
+          wrapper.insertAdjacentHTML('afterbegin', thinkingSectionHTML);
+        } else {
+          // Update existing thinking content
+          const thinkingContentInner = thinkingSection.querySelector(".thinking-content-inner");
+          if (thinkingContentInner) {
+            thinkingContentInner.innerHTML = formatMessageContent(content);
+          }
+        }
+        
+        // Keep main content as thinking indicator
         contentElement.className = "message-content thinking-message";
-        contentElement.innerHTML = formattedContent;
+        contentElement.innerHTML = '🧠 Thinking...';
         // Hide copy button during thinking
         if (copyBtn) copyBtn.style.display = "none";
       } else {
+        // When complete, ensure thinking section is collapsed
+        if (isComplete && thinkingContent) {
+          const wrapper = existingMessage.querySelector(".message-content-wrapper");
+          let thinkingSection = wrapper.querySelector(".thinking-section");
+          
+          if (!thinkingSection) {
+            const thinkingSectionHTML = renderThinkingSection(thinkingContent, true); // Collapsed when complete
+            wrapper.insertAdjacentHTML('afterbegin', thinkingSectionHTML);
+          } else {
+            // Update to final thinking content and collapse
+            const thinkingContentInner = thinkingSection.querySelector(".thinking-content-inner");
+            const thinkingContentDiv = thinkingSection.querySelector(".thinking-content");
+            if (thinkingContentInner) {
+              thinkingContentInner.innerHTML = formatMessageContent(thinkingContent);
+            }
+            if (thinkingContentDiv) {
+              thinkingContentDiv.style.display = "none";
+              thinkingSection.classList.remove('expanded');
+              thinkingSection.classList.add('collapsed');
+            }
+          }
+        }
+        
         contentElement.className = "message-content";
         contentElement.innerHTML =
           formattedContent +
@@ -936,8 +1061,10 @@ function updateStreamingMessage(messageId, content, isComplete) {
           copyBtn.style.display = "block";
         } else {
           // Add copy button if it doesn't exist (transition from thinking to content)
-          const wrapper = existingMessage.querySelector(".message-content-wrapper");
-          if (wrapper) {
+          const finalResponseContainer = existingMessage.querySelector(
+            ".final-response-container"
+          );
+          if (finalResponseContainer) {
             const copyButton = document.createElement("button");
             copyButton.className = "message-copy-btn";
             copyButton.onclick = () => copyMessage(messageId);
@@ -947,7 +1074,7 @@ function updateStreamingMessage(messageId, content, isComplete) {
                 <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
               </svg>
             `;
-            wrapper.appendChild(copyButton);
+            finalResponseContainer.appendChild(copyButton);
           }
         }
       }
@@ -972,11 +1099,15 @@ function updateStreamingMessage(messageId, content, isComplete) {
                     <div class="message-content">${formattedContent}${
       isComplete ? "" : '<span class="streaming-cursor">|</span>'
     }</div>
-                    ${!isThinking ? `<button class="message-copy-btn" onclick="copyMessage('${messageId}')" title="Copy message">
+                    ${
+                      !isThinking
+                        ? `<button class="message-copy-btn" onclick="copyMessage('${messageId}')" title="Copy message">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
                         </svg>
-                    </button>` : ''}
+                    </button>`
+                        : ""
+                    }
                 </div>
             </div>
         `;
@@ -1008,7 +1139,7 @@ function autoResize() {
   const scrollHeight = messageInput.scrollHeight;
   const newHeight = Math.min(Math.max(scrollHeight, 20), 120);
   messageInput.style.height = newHeight + "px";
-  
+
   // Ensure the textarea is scrolled to bottom if content exceeds max height
   if (scrollHeight > 120) {
     messageInput.scrollTop = scrollHeight;
@@ -1491,13 +1622,13 @@ function openFile(filePath) {
 // Configure model functionality
 function configureModel(event) {
   event.stopPropagation(); // Prevent model selection
-  
+
   // Send message to backend to run "claude /model" command
   vscode.postMessage({
     type: "runCommand",
-    command: "claude /model"
+    command: "claude /model",
   });
-  
+
   hideModelDropdown();
 }
 
@@ -1576,23 +1707,23 @@ function copyMessage(messageId) {
 // === Enhanced Prompt Templates ===
 
 let enhancePromptTemplates = [];
-let selectedTemplateId = 'none';
+let selectedTemplateId = "none";
 
 function loadEnhancePromptTemplates() {
   vscode.postMessage({ type: "getEnhancePromptTemplates" });
 }
 
 function saveEnhancePromptTemplates() {
-  vscode.postMessage({ 
+  vscode.postMessage({
     type: "saveEnhancePromptTemplates",
-    templates: enhancePromptTemplates
+    templates: enhancePromptTemplates,
   });
 }
 
 function renderTemplateList() {
   const templateList = document.getElementById("templateList");
   const templateCount = document.getElementById("templateCount");
-  
+
   if (enhancePromptTemplates.length === 0) {
     templateList.innerHTML = `
       <div class="template-empty-state">
@@ -1613,18 +1744,24 @@ function renderTemplateList() {
       </div>
     `;
   } else {
-    templateList.innerHTML = enhancePromptTemplates.map(template => `
+    templateList.innerHTML = enhancePromptTemplates
+      .map(
+        (template) => `
       <div class="template-item" data-template-id="${template.id}">
         <div class="template-header">
           <div class="template-name">${template.name}</div>
           <div class="template-actions">
-            <button class="template-action-btn edit" onclick="editTemplate('${template.id}')" title="Edit">
+            <button class="template-action-btn edit" onclick="editTemplate('${
+              template.id
+            }')" title="Edit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
-            <button class="template-action-btn delete" onclick="deleteTemplate('${template.id}')" title="Delete">
+            <button class="template-action-btn delete" onclick="deleteTemplate('${
+              template.id
+            }')" title="Delete">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
@@ -1633,11 +1770,16 @@ function renderTemplateList() {
           </div>
         </div>
         <div class="template-description">${template.description}</div>
-        <div class="template-content-preview">${template.content.substring(0, 100)}${template.content.length > 100 ? '...' : ''}</div>
+        <div class="template-content-preview">${template.content.substring(
+          0,
+          100
+        )}${template.content.length > 100 ? "..." : ""}</div>
       </div>
-    `).join('');
+    `
+      )
+      .join("");
   }
-  
+
   if (templateCount) {
     templateCount.textContent = `${enhancePromptTemplates.length}/10`;
   }
@@ -1646,9 +1788,9 @@ function renderTemplateList() {
 function renderTemplateDropdown() {
   const dropdownContent = document.getElementById("templateDropdownContent");
   const templateCount = document.getElementById("templateCount");
-  
+
   if (!dropdownContent) return;
-  
+
   let dropdownHTML = `
     <div class="template-option" data-template-id="none">
       <div class="template-option-icon">
@@ -1662,9 +1804,11 @@ function renderTemplateDropdown() {
       </div>
     </div>
   `;
-  
+
   if (enhancePromptTemplates.length > 0) {
-    dropdownHTML += enhancePromptTemplates.map(template => `
+    dropdownHTML += enhancePromptTemplates
+      .map(
+        (template) => `
       <div class="template-option" data-template-id="${template.id}">
         <div class="template-option-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1677,23 +1821,25 @@ function renderTemplateDropdown() {
           <div class="template-option-desc">${template.description}</div>
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join("");
   }
-  
+
   dropdownContent.innerHTML = dropdownHTML;
-  
+
   // Add click handlers for template options
-  dropdownContent.querySelectorAll('.template-option').forEach(option => {
-    option.addEventListener('click', () => {
-      const templateId = option.getAttribute('data-template-id');
+  dropdownContent.querySelectorAll(".template-option").forEach((option) => {
+    option.addEventListener("click", () => {
+      const templateId = option.getAttribute("data-template-id");
       selectTemplate(templateId);
     });
   });
-  
+
   if (templateCount) {
     templateCount.textContent = `${enhancePromptTemplates.length}/10`;
   }
-  
+
   updateSelectedTemplate();
 }
 
@@ -1705,16 +1851,17 @@ function selectTemplate(templateId) {
 }
 
 function updateSelectedTemplate() {
-  const options = document.querySelectorAll('.template-option');
-  options.forEach(option => {
-    const isSelected = option.getAttribute('data-template-id') === selectedTemplateId;
-    option.classList.toggle('selected', isSelected);
+  const options = document.querySelectorAll(".template-option");
+  options.forEach((option) => {
+    const isSelected =
+      option.getAttribute("data-template-id") === selectedTemplateId;
+    option.classList.toggle("selected", isSelected);
   });
 }
 
 function updateTemplateSelectorButton() {
   const selectorBtn = document.getElementById("templateSelectorBtn");
-  if (selectedTemplateId !== 'none') {
+  if (selectedTemplateId !== "none") {
     selectorBtn.classList.add("template-selected");
   } else {
     selectorBtn.classList.remove("template-selected");
@@ -1749,22 +1896,24 @@ function addTemplate() {
 }
 
 function editTemplate(templateId) {
-  const template = enhancePromptTemplates.find(t => t.id === templateId);
+  const template = enhancePromptTemplates.find((t) => t.id === templateId);
   if (template) {
     showTemplateModal(template);
   }
 }
 
 function deleteTemplate(templateId) {
-  if (confirm('Are you sure you want to delete this template?')) {
-    enhancePromptTemplates = enhancePromptTemplates.filter(t => t.id !== templateId);
+  if (confirm("Are you sure you want to delete this template?")) {
+    enhancePromptTemplates = enhancePromptTemplates.filter(
+      (t) => t.id !== templateId
+    );
     saveEnhancePromptTemplates();
     renderTemplateList();
     renderTemplateDropdown();
-    
+
     // Reset selected template if it was deleted
     if (selectedTemplateId === templateId) {
-      selectedTemplateId = 'none';
+      selectedTemplateId = "none";
       updateSelectedTemplate();
     }
   }
@@ -1772,13 +1921,15 @@ function deleteTemplate(templateId) {
 
 function showTemplateModal(existingTemplate = null) {
   const isEditing = !!existingTemplate;
-  
+
   // Create modal HTML
   const modalHTML = `
     <div class="template-modal-overlay" id="templateModalOverlay">
       <div class="template-modal">
         <div class="template-modal-header">
-          <h2 class="template-modal-title">${isEditing ? 'Edit Template' : 'Add Template'}</h2>
+          <h2 class="template-modal-title">${
+            isEditing ? "Edit Template" : "Add Template"
+          }</h2>
           <button class="template-close-button" id="templateCloseBtn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.3 5.71c-.39-.39-1.02-.39-1.41 0L12 10.59 7.11 5.7c-.39-.39-1.02-.39-1.41 0s-.39 1.02 0 1.41L10.59 12 5.7 16.89c-.39.39-.39 1.02 0 1.41s1.02.39 1.41 0L12 13.41l4.89 4.88c.39.39 1.02.39 1.41 0s.39-1.02 0-1.41L13.41 12l4.88-4.89c.39-.39.39-1.02.01-1.4z"/>
@@ -1797,7 +1948,7 @@ function showTemplateModal(existingTemplate = null) {
                 name="templateName"
                 class="template-form-input"
                 placeholder="e.g., Code Review"
-                value="${existingTemplate ? existingTemplate.name : ''}"
+                value="${existingTemplate ? existingTemplate.name : ""}"
                 required
               />
             </div>
@@ -1812,7 +1963,7 @@ function showTemplateModal(existingTemplate = null) {
                 name="templateDescription"
                 class="template-form-input"
                 placeholder="e.g., Review code for quality and best practices"
-                value="${existingTemplate ? existingTemplate.description : ''}"
+                value="${existingTemplate ? existingTemplate.description : ""}"
                 required
               />
             </div>
@@ -1828,7 +1979,7 @@ function showTemplateModal(existingTemplate = null) {
                 rows="8"
                 placeholder="Enter the template content. Use {userInput} as a placeholder for the user's input."
                 required
-              >${existingTemplate ? existingTemplate.content : ''}</textarea>
+              >${existingTemplate ? existingTemplate.content : ""}</textarea>
               <div class="template-form-help">
                 Use {userInput} as a placeholder where the user's original prompt should be inserted.
               </div>
@@ -1839,7 +1990,7 @@ function showTemplateModal(existingTemplate = null) {
                 Cancel
               </button>
               <button type="submit" class="template-form-submit" id="saveTemplate">
-                ${isEditing ? 'Update Template' : 'Add Template'}
+                ${isEditing ? "Update Template" : "Add Template"}
               </button>
             </div>
           </form>
@@ -1847,80 +1998,84 @@ function showTemplateModal(existingTemplate = null) {
       </div>
     </div>
   `;
-  
+
   // Remove existing modal if any
-  const existingModal = document.getElementById('templateModalOverlay');
+  const existingModal = document.getElementById("templateModalOverlay");
   if (existingModal) {
     existingModal.remove();
   }
-  
+
   // Add modal to body
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-  
-  const modal = document.getElementById('templateModalOverlay');
-  const form = document.getElementById('templateForm');
-  const closeBtn = document.getElementById('templateCloseBtn');
-  const cancelBtn = document.getElementById('cancelTemplate');
-  
+  document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+  const modal = document.getElementById("templateModalOverlay");
+  const form = document.getElementById("templateForm");
+  const closeBtn = document.getElementById("templateCloseBtn");
+  const cancelBtn = document.getElementById("cancelTemplate");
+
   // Show modal
-  setTimeout(() => modal.classList.add('visible'), 10);
-  
+  setTimeout(() => modal.classList.add("visible"), 10);
+
   // Event handlers
-  closeBtn.addEventListener('click', hideTemplateModal);
-  cancelBtn.addEventListener('click', hideTemplateModal);
-  modal.addEventListener('click', (e) => {
+  closeBtn.addEventListener("click", hideTemplateModal);
+  cancelBtn.addEventListener("click", hideTemplateModal);
+  modal.addEventListener("click", (e) => {
     if (e.target === modal) hideTemplateModal();
   });
-  
-  form.addEventListener('submit', (e) => {
+
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
     saveTemplateFromForm(existingTemplate);
   });
-  
+
   // Focus on name field
-  document.getElementById('templateName').focus();
+  document.getElementById("templateName").focus();
 }
 
 function hideTemplateModal() {
-  const modal = document.getElementById('templateModalOverlay');
+  const modal = document.getElementById("templateModalOverlay");
   if (modal) {
-    modal.classList.remove('visible');
+    modal.classList.remove("visible");
     setTimeout(() => modal.remove(), 300);
   }
 }
 
 function saveTemplateFromForm(existingTemplate = null) {
-  const name = document.getElementById('templateName').value.trim();
-  const description = document.getElementById('templateDescription').value.trim();
-  const content = document.getElementById('templateContent').value.trim();
-  
+  const name = document.getElementById("templateName").value.trim();
+  const description = document
+    .getElementById("templateDescription")
+    .value.trim();
+  const content = document.getElementById("templateContent").value.trim();
+
   if (!name || !description || !content) {
-    alert('Please fill in all required fields.');
+    alert("Please fill in all required fields.");
     return;
   }
-  
+
   const template = {
     id: existingTemplate ? existingTemplate.id : Date.now().toString(),
     name,
     description,
-    content
+    content,
   };
-  
+
   if (existingTemplate) {
     // Update existing template
-    const index = enhancePromptTemplates.findIndex(t => t.id === existingTemplate.id);
+    const index = enhancePromptTemplates.findIndex(
+      (t) => t.id === existingTemplate.id
+    );
     if (index !== -1) {
       enhancePromptTemplates[index] = template;
     }
   } else {
     // Add new template
     if (enhancePromptTemplates.length >= 10) {
-      alert('Maximum of 10 templates allowed.');
+      alert("Maximum of 10 templates allowed.");
       return;
     }
     enhancePromptTemplates.push(template);
   }
-  
+
   saveEnhancePromptTemplates();
   renderTemplateList();
   renderTemplateDropdown();
@@ -2094,12 +2249,13 @@ enhancePromptButton.addEventListener("click", () => {
   if (isEnhancing) {
     return;
   }
-  
+
   const currentText = messageInput.value.trim();
-  
+
   if (!currentText) {
     // Show help text when input is empty
-    messageInput.value = "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.";
+    messageInput.value =
+      "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.";
     messageInput.focus();
     // Small delay to ensure DOM updates before resizing
     setTimeout(() => {
@@ -2111,21 +2267,23 @@ enhancePromptButton.addEventListener("click", () => {
     isEnhancing = true;
     enhancePromptButton.classList.add("processing");
     enhancePromptButton.disabled = true;
-    
+
     // Get selected template
     let templateContent = null;
-    if (selectedTemplateId !== 'none') {
-      const selectedTemplate = enhancePromptTemplates.find(t => t.id === selectedTemplateId);
+    if (selectedTemplateId !== "none") {
+      const selectedTemplate = enhancePromptTemplates.find(
+        (t) => t.id === selectedTemplateId
+      );
       if (selectedTemplate) {
         templateContent = selectedTemplate.content;
       }
     }
-    
+
     // Send message to extension to enhance the prompt
     vscode.postMessage({
       type: "enhancePrompt",
       text: currentText,
-      templateContent: templateContent
+      templateContent: templateContent,
     });
   }
 });
@@ -2138,8 +2296,11 @@ templateSelectorBtn.addEventListener("click", toggleTemplateDropdown);
 document.addEventListener("click", (e) => {
   const templateDropdown = document.getElementById("templateDropdown");
   const templateSelectorBtn = document.getElementById("templateSelectorBtn");
-  
-  if (!templateDropdown.contains(e.target) && !templateSelectorBtn.contains(e.target)) {
+
+  if (
+    !templateDropdown.contains(e.target) &&
+    !templateSelectorBtn.contains(e.target)
+  ) {
     hideTemplateDropdown();
   }
 });
@@ -2161,20 +2322,22 @@ settingsModalOverlay.addEventListener("click", (e) => {
 });
 
 // Settings Category Navigation
-document.querySelectorAll('.settings-category').forEach(category => {
-  category.addEventListener('click', () => {
-    const categoryName = category.getAttribute('data-category');
+document.querySelectorAll(".settings-category").forEach((category) => {
+  category.addEventListener("click", () => {
+    const categoryName = category.getAttribute("data-category");
     showSettingsCategory(categoryName);
   });
 });
 
 // Add Template Button
-document.getElementById("addTemplateBtn").addEventListener("click", addTemplate);
+document
+  .getElementById("addTemplateBtn")
+  .addEventListener("click", addTemplate);
 
 function showSettingsModal() {
   settingsModalOverlay.classList.add("visible");
   // Default to enhance-prompt category
-  showSettingsCategory('enhance-prompt');
+  showSettingsCategory("enhance-prompt");
   // Load templates
   loadEnhancePromptTemplates();
 }
@@ -2186,13 +2349,13 @@ function hideSettingsModal() {
 function saveSettings() {
   // Save any pending changes
   saveEnhancePromptTemplates();
-  
+
   // Show brief feedback
   const saveBtn = document.getElementById("settingsSaveBtn");
   const originalText = saveBtn.textContent;
   saveBtn.textContent = "Saved!";
   saveBtn.disabled = true;
-  
+
   setTimeout(() => {
     saveBtn.textContent = originalText;
     saveBtn.disabled = false;
@@ -2201,16 +2364,18 @@ function saveSettings() {
 
 function showSettingsCategory(categoryName) {
   // Update sidebar selection
-  document.querySelectorAll('.settings-category').forEach(cat => {
-    cat.classList.remove('active');
+  document.querySelectorAll(".settings-category").forEach((cat) => {
+    cat.classList.remove("active");
   });
-  document.querySelector(`[data-category="${categoryName}"]`).classList.add('active');
-  
+  document
+    .querySelector(`[data-category="${categoryName}"]`)
+    .classList.add("active");
+
   // Show corresponding panel
-  document.querySelectorAll('.settings-panel').forEach(panel => {
-    panel.style.display = 'none';
+  document.querySelectorAll(".settings-panel").forEach((panel) => {
+    panel.style.display = "none";
   });
-  document.getElementById(`${categoryName}-panel`).style.display = 'block';
+  document.getElementById(`${categoryName}-panel`).style.display = "block";
 }
 
 // Model Controls
@@ -2256,8 +2421,10 @@ function updateModelDropdownState() {
       multiplierEl.style.display = "inline-block";
     }
   });
-  
-  const currentOption = document.querySelector(`[data-model="${currentSelectedModel}"]`);
+
+  const currentOption = document.querySelector(
+    `[data-model="${currentSelectedModel}"]`
+  );
   if (currentOption) {
     currentOption.classList.add("selected");
     // Show checkmark for selected model
@@ -2308,7 +2475,7 @@ document.querySelectorAll(".model-option").forEach((option) => {
 document.addEventListener("click", (e) => {
   const modelDropdown = document.getElementById("modelDropdown");
   const modelButton = document.getElementById("modelSelectButton");
-  
+
   if (!modelDropdown.contains(e.target) && !modelButton.contains(e.target)) {
     hideModelDropdown();
   }
@@ -2348,7 +2515,9 @@ window.addEventListener("message", (event) => {
         updateStreamingMessage(
           message.messageId,
           message.content,
-          message.isComplete
+          message.isComplete,
+          message.messageType,
+          message.thinkingContent
         );
         if (message.isComplete) {
           isWaiting = false;
@@ -2398,7 +2567,7 @@ window.addEventListener("message", (event) => {
       isEnhancing = false;
       enhancePromptButton.classList.remove("processing");
       enhancePromptButton.disabled = false;
-      
+
       // Update the input with the enhanced prompt
       messageInput.value = message.enhancedText;
       messageInput.focus();

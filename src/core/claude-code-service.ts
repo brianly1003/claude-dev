@@ -19,10 +19,11 @@ export interface CompletionRequest {
 export interface CompletionResponse {
   suggestion: string;
   error?: string;
+  thinkingContent?: string;
 }
 
 export interface StreamingCompletionOptions {
-  onStreamingUpdate?: (partialResponse: string, isComplete: boolean) => void;
+  onStreamingUpdate?: (partialResponse: string, isComplete: boolean, messageType?: string, thinkingContent?: string) => void;
 }
 
 export class ClaudeCodeService {
@@ -41,11 +42,12 @@ export class ClaudeCodeService {
 
   public stopGeneration(): void {
     if (this.currentAbortController) {
-      this.log('Stopping generation on user request');
+      this.log('Stopping generation on user request - aborting current request');
       this.currentAbortController.abort();
+      this.log('Abort signal sent, setting controller to null');
       this.currentAbortController = null;
     } else {
-      this.log('No active generation to stop');
+      this.log('No active generation to stop - no abort controller found');
     }
   }
 
@@ -145,8 +147,16 @@ export class ClaudeCodeService {
 
         let turnCount = 0;
         const maxResponseLength = 50000; // Limit response length
+        let thinkingContent = ''; // Store thinking content separately
         
-        for await (const message of query(queryOptions)) {
+        try {
+          for await (const message of query(queryOptions)) {
+          // Check if request was aborted
+          if (this.currentAbortController?.signal.aborted) {
+            this.log(`Request was aborted, stopping message processing`);
+            break;
+          }
+          
           messages.push(message);
           turnCount++;
           
@@ -163,7 +173,17 @@ export class ClaudeCodeService {
             
             if (assistantMessage.content && Array.isArray(assistantMessage.content)) {
               for (const block of assistantMessage.content) {
-                if (block.type === 'text' && block.text) {
+                if (block.type === 'thinking') {
+                  // Accumulate thinking content
+                  const thinking = block.thinking || 'processing...';
+                  thinkingContent += thinking + '\n\n';
+                  this.log(`Claude is thinking: ${thinking.substring(0, 100)}...`);
+                  
+                  if (options?.onStreamingUpdate && !this.currentAbortController?.signal.aborted) {
+                    // Send thinking update to UI with accumulated content
+                    options.onStreamingUpdate(thinkingContent, false, 'thinking');
+                  }
+                } else if (block.type === 'text' && block.text) {
                   // Prevent individual text blocks from being too large
                   const truncatedText = block.text.length > 5000 ? 
                     block.text.substring(0, 5000) + '\n\n[Response truncated to prevent overflow]' : 
@@ -172,7 +192,7 @@ export class ClaudeCodeService {
                   accumulatedResponse += truncatedText + '\n\n';
                   
                   // Stream update to UI immediately
-                  if (options?.onStreamingUpdate) {
+                  if (options?.onStreamingUpdate && !this.currentAbortController?.signal.aborted) {
                     options.onStreamingUpdate(accumulatedResponse, false);
                   }
                 } else if (block.type === 'tool_use') {
@@ -215,7 +235,7 @@ export class ClaudeCodeService {
                   accumulatedResponse += toolDetails;
                   
                   // Stream tool usage update to UI immediately
-                  if (options?.onStreamingUpdate) {
+                  if (options?.onStreamingUpdate && !this.currentAbortController?.signal.aborted) {
                     options.onStreamingUpdate(accumulatedResponse, false);
                   }
                 }
@@ -228,24 +248,39 @@ export class ClaudeCodeService {
             this.log(`Other message type (${message.type}): ${JSON.stringify(message).substring(0, 200)}...`);
           }
         }
+        } catch (queryError: any) {
+          this.log(`Query error during streaming: ${queryError.message}`);
+          const wasAborted = this.currentAbortController?.signal.aborted;
+          if (queryError.name === 'AbortError' || wasAborted) {
+            this.log(`Query was properly aborted`);
+            return { suggestion: accumulatedResponse || "", error: "Request was cancelled by user" };
+          }
+          // Re-throw other errors
+          throw queryError;
+        }
 
         clearTimeout(timeout);
+        const wasAborted = this.currentAbortController?.signal.aborted;
         this.currentAbortController = null;
 
         if (accumulatedResponse.trim()) {
           this.log(`Final response: ${accumulatedResponse.substring(0, 100)}...`);
+          this.log(`Thinking content: ${thinkingContent.length} characters`);
           
-          // Send final streaming update with completion flag
-          if (options?.onStreamingUpdate) {
-            options.onStreamingUpdate(accumulatedResponse.trim(), true);
+          // Send final streaming update with completion flag and thinking content
+          if (options?.onStreamingUpdate && !wasAborted) {
+            options.onStreamingUpdate(accumulatedResponse.trim(), true, 'complete', thinkingContent);
           }
           
-          return { suggestion: accumulatedResponse.trim() };
+          return { 
+            suggestion: accumulatedResponse.trim(),
+            thinkingContent: thinkingContent.trim()
+          };
         } else {
           const errorMsg = "No response received from Claude Code SDK";
           
           // Send error as streaming update
-          if (options?.onStreamingUpdate) {
+          if (options?.onStreamingUpdate && !wasAborted) {
             options.onStreamingUpdate(errorMsg, true);
           }
           
@@ -254,8 +289,9 @@ export class ClaudeCodeService {
 
       } catch (error: any) {
         clearTimeout(timeout);
+        const wasAborted = this.currentAbortController?.signal.aborted;
         this.currentAbortController = null;
-        if (error.name === 'AbortError') {
+        if (error.name === 'AbortError' || wasAborted) {
           this.log(`Request was aborted`);
           return { suggestion: accumulatedResponse || "", error: "Request timeout - partial response may be available" };
         }
