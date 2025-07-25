@@ -64,17 +64,6 @@
     padding: $spacing-xs $spacing-sm;
   }
   
-  .compact-button {
-    width: $button-height-sm;
-    height: $button-height-sm;
-    padding: $spacing-xs;
-  }
-  
-  .compact-button svg {
-    width: $icon-size-sm;
-    height: $icon-size-sm;
-  }
-  
   .token-display-large {
     font-size: 11px;
     padding: $spacing-xs $spacing-sm;
@@ -118,18 +107,7 @@
     height: 24px;
     padding: 3px $spacing-xs;
   }
-  
-  .compact-button {
-    width: 24px;
-    height: 24px;
-    padding: 3px;
-  }
-  
-  .compact-button svg {
-    width: 10px;
-    height: 10px;
-  }
-  
+
   .token-display-large {
     font-size: 11px;
     padding: 3px 7px;
@@ -189,17 +167,7 @@
     font-size: 11px;
     height: 26px;
   }
-  
-  .compact-button {
-    width: 26px;
-    height: 26px;
-  }
-  
-  .compact-button svg {
-    width: $icon-size-sm;
-    height: $icon-size-sm;
-  }
-  
+
   .token-display-large {
     font-size: $font-size-sm;
     padding: 5px 10px;
@@ -244,18 +212,7 @@
     font-size: 11px;
     height: $button-height-sm;
   }
-  
-  .compact-button {
-    width: $button-height-sm;
-    height: $button-height-sm;
-    padding: $spacing-xs;
-  }
-  
-  .compact-button svg {
-    width: 14px;
-    height: 14px;
-  }
-  
+
   .token-display-large {
     font-size: 13px;
     padding: $spacing-xs $spacing-md;
@@ -301,18 +258,7 @@
     height: 30px;
     padding: $spacing-xs 10px;
   }
-  
-  .compact-button {
-    width: 30px;
-    height: 30px;
-    padding: 7px;
-  }
-  
-  .compact-button svg {
-    width: $icon-size;
-    height: $icon-size;
-  }
-  
+
   .token-display-large {
     font-size: 14px;
     padding: 7px 14px;
@@ -344,10 +290,6 @@
 
 // High DPI / Retina Display Adjustments
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .compact-button, .compact-select, .model-select-button {
-    border-width: 0.5px;
-  }
-  
   .input-wrapper {
     border-width: 1.5px;
   }
@@ -376,17 +318,7 @@
     min-width: 40px;
     max-width: 70px;
   }
-  
-  .compact-button {
-    width: 20px;
-    padding: 2px;
-  }
-  
-  .compact-button svg {
-    width: 9px;
-    height: 9px;
-  }
-  
+
   .token-display-large {
     font-size: 10px;
     padding: 3px $spacing-xs;
@@ -424,15 +356,6 @@
 
 // Touch Device Improvements
 @media (pointer: coarse) {
-  .compact-button, .compact-select, .model-select-button {
-    min-height: $button-height-sm;
-    min-width: $button-height-sm;
-  }
-  
-  .compact-select, .model-select-button {
-    padding: $spacing-xs $spacing-sm;
-  }
-  
   .send-button {
     min-width: 32px;
     min-height: 32px;

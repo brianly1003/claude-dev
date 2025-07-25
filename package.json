@@ -164,7 +164,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile && npm run build:css",
-    "compile": "tsc -p ./",
+    "compile": "node build-scss.js && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "build:css": "node build-scss.js",
     "watch:css": "chokidar 'src/ui/styles/scss/**/*.scss' -c 'npm run build:css'",
