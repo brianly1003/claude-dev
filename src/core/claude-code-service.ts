@@ -58,6 +58,45 @@ export class ClaudeCodeService {
     }
   }
 
+  private parseUsageLimitMessage(text: string): string | null {
+    // Check if text matches pattern: "Claude AI usage limit reached|<timestamp>"
+    const usageLimitPattern = /^Claude AI usage limit reached\|(\d+)$/;
+    const match = text.match(usageLimitPattern);
+    
+    if (!match) {
+      return null;
+    }
+    
+    try {
+      const timestamp = parseInt(match[1], 10);
+      const resetDate = new Date(timestamp * 1000); // Convert from Unix timestamp (seconds) to milliseconds
+      
+      // Format time in local timezone
+      const timeOptions: Intl.DateTimeFormatOptions = {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZoneName: 'short'
+      };
+      
+      const formattedTime = resetDate.toLocaleString('en-US', timeOptions);
+      
+      // Extract just the time part and timezone
+      const timeMatch = formattedTime.match(/(\d{1,2}:\d{2}\s*(AM|PM))\s*(.+)/i);
+      if (timeMatch) {
+        const time = timeMatch[1].toLowerCase().replace(':00', ''); // Remove :00 for clean format like "2am"
+        const timezone = timeMatch[3];
+        return `Claude usage limit reached. Your limit will reset at ${time} (${timezone}).`;
+      } else {
+        // Fallback format if parsing fails
+        return `Claude usage limit reached. Your limit will reset at ${formattedTime}.`;
+      }
+    } catch (error) {
+      this.log(`Error parsing usage limit timestamp: ${error}`);
+      return "Claude usage limit reached. Please try again later.";
+    }
+  }
+
   public async getCompletion(
     request: CompletionRequest,
     options?: StreamingCompletionOptions
@@ -145,6 +184,12 @@ export class ClaudeCodeService {
           abortController: '[AbortController]'
         }, null, 2)}`);
 
+        // Log the effective command that will be executed for debugging
+        const cliPath = this.config.claudeCodePath || 'claude';
+        this.log(`Executing Claude Code CLI: ${cliPath} with args: ${JSON.stringify(execArgs)}`);
+        this.log(`Working directory: ${this.getCurrentWorkingDirectory()}`);
+        this.log(`Subprocess mode: ${queryOptions.useSubprocess}`);
+
         let turnCount = 0;
         const maxResponseLength = 50000; // Limit response length
         let thinkingContent = ''; // Store thinking content separately
@@ -184,10 +229,19 @@ export class ClaudeCodeService {
                     options.onStreamingUpdate(thinkingContent, false, 'thinking');
                   }
                 } else if (block.type === 'text' && block.text) {
+                  // Check if this is a usage limit message that needs special formatting
+                  const parsedLimitMessage = this.parseUsageLimitMessage(block.text);
+                  let textToProcess = parsedLimitMessage || block.text;
+                  
+                  // Log when we detect and transform a usage limit message
+                  if (parsedLimitMessage) {
+                    this.log(`Detected usage limit message, transformed to: ${parsedLimitMessage}`);
+                  }
+                  
                   // Prevent individual text blocks from being too large
-                  const truncatedText = block.text.length > 5000 ? 
-                    block.text.substring(0, 5000) + '\n\n[Response truncated to prevent overflow]' : 
-                    block.text;
+                  const truncatedText = textToProcess.length > 5000 ? 
+                    textToProcess.substring(0, 5000) + '\n\n[Response truncated to prevent overflow]' : 
+                    textToProcess;
                   
                   accumulatedResponse += truncatedText + '\n\n';
                   
@@ -206,7 +260,14 @@ export class ClaudeCodeService {
                   } else if (block.name === 'Read' && block.input.file_path) {
                     toolDetails = `● Read(${block.input.file_path})\n`;
                   } else if (block.name === 'Edit' && block.input.file_path) {
-                    toolDetails = `● Edit(${block.input.file_path})\n`;
+                    // For Edit tool, include the full tool call JSON so frontend can render diff
+                    const toolCall = {
+                      type: 'tool_use',
+                      id: block.id,
+                      name: block.name,
+                      input: block.input
+                    };
+                    toolDetails = `[${JSON.stringify(toolCall)}]\n`;
                   } else if (block.name === 'Write' && block.input.file_path) {
                     toolDetails = `● Write(${block.input.file_path})\n`;
                   } else if (block.name === 'LS' && block.input.path) {
@@ -244,6 +305,24 @@ export class ClaudeCodeService {
             this.log(`Total accumulated response: ${accumulatedResponse.length} characters`);
           } else if (message.type === 'result') {
             this.log(`Tool result received: ${JSON.stringify(message).substring(0, 200)}...`);
+            
+            // Check if this is an error result with usage limit information
+            const resultMessage = message as any;
+            if (resultMessage.is_error && resultMessage.result) {
+              const parsedLimitMessage = this.parseUsageLimitMessage(resultMessage.result);
+              if (parsedLimitMessage) {
+                this.log(`Detected usage limit in result message: ${parsedLimitMessage}`);
+                
+                // Send usage limit message as streaming update and return error
+                if (options?.onStreamingUpdate && !this.currentAbortController?.signal.aborted) {
+                  options.onStreamingUpdate(parsedLimitMessage, true);
+                }
+                
+                clearTimeout(timeout);
+                this.currentAbortController = null;
+                return { suggestion: "", error: parsedLimitMessage };
+              }
+            }
           } else {
             this.log(`Other message type (${message.type}): ${JSON.stringify(message).substring(0, 200)}...`);
           }
@@ -307,7 +386,27 @@ export class ClaudeCodeService {
 
     } catch (error: any) {
       this.log(`SDK error: ${error.message}`);
-      return { suggestion: "", error: `Claude Code SDK error: ${error.message}` };
+      this.log(`Full error object: ${JSON.stringify(error, null, 2)}`);
+      
+      // Enhanced error handling for common Claude Code CLI issues
+      let enhancedErrorMessage = `Claude Code SDK error: ${error.message}`;
+      
+      // Check for specific error patterns and provide better user messages
+      if (error.message && error.message.includes('process exited with code 1')) {
+        this.log(`Claude Code CLI exited with code 1 - this typically indicates API authentication or usage limit issues`);
+        enhancedErrorMessage = `Claude usage limit reached or authentication issue. Please check your API key and usage limits.`;
+      } else if (error.message && error.message.includes('process exited with code 2')) {
+        enhancedErrorMessage = `Claude Code CLI configuration error. Please check your setup.`;
+      } else if (error.message && error.message.includes('ENOENT') || error.message.includes('command not found')) {
+        enhancedErrorMessage = `Claude Code CLI not found. Please install or configure the claude binary path.`;
+      } else if (error.message && error.message.includes('timeout')) {
+        enhancedErrorMessage = `Request timed out. Please try again.`;
+      } else if (error.message && error.message.includes('network') || error.message.includes('ECONNREFUSED')) {
+        enhancedErrorMessage = `Network connection error. Please check your internet connection.`;
+      }
+      
+      this.log(`Enhanced error message: ${enhancedErrorMessage}`);
+      return { suggestion: "", error: enhancedErrorMessage };
     }
   }
 

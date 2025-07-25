@@ -23,7 +23,8 @@
       "Bash(find:*)",
       "Bash(npm install:*)",
       "Bash(npm run build:css:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

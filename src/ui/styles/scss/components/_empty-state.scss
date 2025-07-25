@@ -2,9 +2,9 @@
 // Empty State Component
 // ============================================
 
-@use '../abstracts/variables' as *;
-@use '../abstracts/mixins' as *;
-@use '../abstracts/animations' as *;
+@use "../abstracts/variables" as *;
+@use "../abstracts/mixins" as *;
+@use "../abstracts/animations" as *;
 
 .empty-state {
   flex: 1;
@@ -15,7 +15,7 @@
 }
 
 .empty-state-logo {
-  @include flex-center;
+  @include flex-center(row, $spacing-sm);
   width: 80px;
   height: 80px;
   background: $brand-gradient;
@@ -49,7 +49,7 @@
   margin: $spacing-lg 0;
   text-align: left;
   max-width: 300px;
-  
+
   li {
     display: flex;
     align-items: center;

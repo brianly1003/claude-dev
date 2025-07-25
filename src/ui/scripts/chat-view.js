@@ -719,7 +719,19 @@ function renderMessages(messages) {
   if (messages.length === 0) {
     messagesContainer.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-logo">C</div>
+                <div class="empty-state-logo">
+                  <span>C.</span>
+                  <span style="
+    position: absolute;
+    font-size: 24px;
+    bottom: -8px;
+    rotate: 75deg;
+    left: 30px;
+">Đ</span>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 16 16">    <!-- Icon from Bootstrap Icons by The Bootstrap Authors - https://github.com/twbs/icons/blob/main/LICENSE.md -->
+    <path fill="currentColor" fill-rule="evenodd" d="M1.114 8.063V7.9c1.005-.102 1.497-.615 1.497-1.6V4.503c0-1.094.39-1.538 1.354-1.538h.273V2h-.376C2.25 2 1.49 2.759 1.49 4.352v1.524c0 1.094-.376 1.456-1.49 1.456v1.299c1.114 0 1.49.362 1.49 1.456v1.524c0 1.593.759 2.352 2.372 2.352h.376v-.964h-.273c-.964 0-1.354-.444-1.354-1.538V9.663c0-.984-.492-1.497-1.497-1.6M14.886 7.9v.164c-1.005.103-1.497.616-1.497 1.6v1.798c0 1.094-.39 1.538-1.354 1.538h-.273v.964h.376c1.613 0 2.372-.759 2.372-2.352v-1.524c0-1.094.376-1.456 1.49-1.456v-1.3c-1.114 0-1.49-.362-1.49-1.456V4.352C14.51 2.759 13.75 2 12.138 2h-.376v.964h.273c.964 0 1.354.444 1.354 1.538V6.3c0 .984.492 1.497 1.497 1.6M7.5 11.5V9.207l-1.621 1.621l-.707-.707L6.792 8.5H4.5v-1h2.293L5.172 5.879l.707-.707L7.5 6.792V4.5h1v2.293l1.621-1.621l.707.707L9.208 7.5H11.5v1H9.207l1.621 1.621l-.707.707L8.5 9.208V11.5z"></path>
+</svg>
+                </div>
                 <h2>Claude Dev Assistant</h2>
                 <p>Your AI-powered coding companion</p>
                 <p>I can explore your codebase, explain complex logic, implement features, and help debug issues.</p>
@@ -755,11 +767,17 @@ function renderMessages(messages) {
       updateTotalTokenCount(messageTokens);
 
       // Check if this is a thinking message (legacy support)
-      const isThinking = !isUser && (msg.content.trim() === "✱ Thinking..." || msg.content.includes("🧠 Thinking..."));
+      const isThinking =
+        !isUser &&
+        (msg.content.trim() === "✱ Thinking..." ||
+          msg.content.includes("🧠 Thinking..."));
       const thinkingClass = isThinking ? " thinking-message" : "";
-      
+
       // Render thinking section if we have thinking content
-      const thinkingSection = !isUser && msg.thinkingContent ? renderThinkingSection(msg.thinkingContent) : '';
+      const thinkingSection =
+        !isUser && msg.thinkingContent
+          ? renderThinkingSection(msg.thinkingContent)
+          : "";
 
       return `
             <div class="message ${msg.role}" data-message-id="${msg.id}">
@@ -795,23 +813,28 @@ function renderMessages(messages) {
 // Render thinking section like Cursor
 function renderThinkingSection(thinkingContent, isCollapsed = true) {
   if (!thinkingContent || !thinkingContent.trim()) {
-    return '';
+    return "";
   }
-  
-  const thinkingId = 'think-' + Date.now() + Math.random().toString(36).substr(2, 9);
+
+  const thinkingId =
+    "think-" + Date.now() + Math.random().toString(36).substr(2, 9);
   const formattedThinking = formatMessageContent(thinkingContent);
-  
+
   return `
-    <div class="thinking-section ${isCollapsed ? 'collapsed' : 'expanded'}">
+    <div class="thinking-section ${isCollapsed ? "collapsed" : "expanded"}">
       <div class="thinking-header" onclick="toggleThinking('${thinkingId}')">
         <svg class="thinking-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8.59 16.58L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.42z"/>
         </svg>
         <span class="thinking-brain-icon">🧠</span>
         <span class="thinking-title">Thought</span>
-        <span class="thinking-duration">for ${Math.ceil(thinkingContent.length / 100)}s</span>
+        <span class="thinking-duration">for ${Math.ceil(
+          thinkingContent.length / 100
+        )}s</span>
       </div>
-      <div class="thinking-content" id="${thinkingId}" ${isCollapsed ? 'style="display: none;"' : ''}>
+      <div class="thinking-content" id="${thinkingId}" ${
+    isCollapsed ? 'style="display: none;"' : ""
+  }>
         <div class="thinking-content-inner">
           ${formattedThinking}
         </div>
@@ -823,17 +846,146 @@ function renderThinkingSection(thinkingContent, isCollapsed = true) {
 // Toggle thinking section visibility
 function toggleThinking(thinkingId) {
   const content = document.getElementById(thinkingId);
-  const section = content.closest('.thinking-section');
-  
-  if (content.style.display === 'none') {
-    content.style.display = 'block';
-    section.classList.remove('collapsed');
-    section.classList.add('expanded');
+  const section = content.closest(".thinking-section");
+
+  if (content.style.display === "none") {
+    content.style.display = "block";
+    section.classList.remove("collapsed");
+    section.classList.add("expanded");
   } else {
-    content.style.display = 'none';
-    section.classList.remove('expanded');
-    section.classList.add('collapsed');
+    content.style.display = "none";
+    section.classList.remove("expanded");
+    section.classList.add("collapsed");
   }
+}
+
+// Render Edit tool call diff display
+function renderEditToolDiff(toolCall) {
+  console.log("renderEditToolDiff called with:", toolCall);
+  const { file_path, old_string, new_string } = toolCall.input;
+  console.log("Input values:", { file_path, old_string, new_string });
+
+  // Extract filename from path
+  const fileName = file_path.split("/").pop();
+  console.log("Filename:", fileName);
+
+  // Create diff display
+  let diffHTML = '<div class="edit-tool-diff">';
+  diffHTML += '<div class="diff-header">';
+  diffHTML += '<span class="diff-icon">📝</span>';
+  diffHTML += '<span class="diff-tool-name">Edit</span>';
+  diffHTML += '<span class="diff-file-path">' + fileName + '</span>';
+  diffHTML += '</div>';
+  diffHTML += '<div class="diff-content">';
+
+  // Show removed content (red)
+  if (old_string && old_string.trim()) {
+    // Convert escaped newlines back to actual newlines for proper line splitting
+    const actualOldString = old_string.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t');
+    const oldLines = actualOldString.split("\n");
+    oldLines.forEach((line) => {
+      diffHTML += '<div class="diff-line removed">';
+      diffHTML += '<span class="diff-marker">-</span>';
+      diffHTML += '<span class="diff-text">' + escapeHtml(line) + '</span>';
+      diffHTML += '</div>';
+    });
+  }
+
+  // Show added content (blue)
+  if (new_string && new_string.trim()) {
+    // Convert escaped newlines back to actual newlines for proper line splitting
+    const actualNewString = new_string.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t');
+    const newLines = actualNewString.split("\n");
+    newLines.forEach((line) => {
+      diffHTML += '<div class="diff-line added">';
+      diffHTML += '<span class="diff-marker">+</span>';
+      diffHTML += '<span class="diff-text">' + escapeHtml(line) + '</span>';
+      diffHTML += '</div>';
+    });
+  }
+
+  diffHTML += '</div>';
+  diffHTML += '</div>';
+
+  console.log("Final diff HTML:", diffHTML);
+  return diffHTML;
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Parse and render tool calls with enhanced diff display
+function renderToolCalls(content) {
+  // Debug: check if we have any Edit tool patterns
+  if (content.includes('"name":"Edit"') || content.includes("'name':'Edit'")) {
+    console.log("Found Edit tool in content, trying to render diff");
+    console.log("Full content:", content);
+  }
+  
+  // Look for tool call patterns - match multiline JSON
+  const toolCallPattern = /\[\{[\s\S]*?"type"\s*:\s*"tool_use"[\s\S]*?\}\]/g;
+  
+  // Debug: check if pattern matches
+  const matches = content.match(toolCallPattern);
+  if (matches) {
+    console.log("Found tool call pattern matches:", matches.length);
+  } else {
+    console.log("No tool call pattern matches found");
+  }
+
+  return content.replace(toolCallPattern, (match) => {
+    try {
+      console.log("Found tool call match:", match);
+      // Clean up the JSON by properly escaping control characters
+      let cleanedMatch = match
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t')
+        .replace(/\f/g, '\\f');
+      
+      console.log("Cleaned match:", cleanedMatch);
+      
+      // Parse the tool call - could be array or single object
+      let parsed = JSON.parse(cleanedMatch);
+      console.log("Parsed JSON:", parsed);
+      const toolCalls = Array.isArray(parsed) ? parsed : [parsed];
+      console.log("Tool calls array:", toolCalls);
+
+      let renderedCalls = "";
+      toolCalls.forEach((call) => {
+        if (call.type === "tool_use" && call.name === "Edit") {
+          console.log("Rendering Edit tool diff for:", call);
+          const diffHTML = renderEditToolDiff(call);
+          console.log("Generated diff HTML:", diffHTML);
+          renderedCalls += diffHTML;
+        } else if (call.type === "tool_use") {
+          // Render other tool calls normally
+          renderedCalls += `
+            <div class="tool-call-display">
+              <div class="tool-header">
+                <span class="tool-icon">🔧</span>
+                <span class="tool-name">${call.name}</span>
+              </div>
+              <div class="tool-input">
+                <pre>${JSON.stringify(call.input, null, 2)}</pre>
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      console.log("Final rendered calls:", renderedCalls);
+      return renderedCalls;
+    } catch (e) {
+      console.error("Failed to parse tool call JSON:", e, "Content:", match);
+      // If parsing fails, return the original content
+      return match;
+    }
+  });
 }
 
 function formatMessageContent(content) {
@@ -852,17 +1004,17 @@ function formatMessageContent(content) {
   let formatted = content.replace(/\\n/g, "\n");
 
   // Handle code blocks first to protect them from other processing
-  formatted = formatted.replace(
-    /```[\s\S]*?```/g,
-    (match) => {
-      // Extract language and content
-      const lines = match.split('\n');
-      const firstLine = lines[0];
-      const language = firstLine.replace('```', '').trim();
-      const codeContent = lines.slice(1, -1).join('\n');
-      return `<code>${codeContent}</code>`;
-    }
-  );
+  formatted = formatted.replace(/```[\s\S]*?```/g, (match) => {
+    // Extract language and content
+    const lines = match.split("\n");
+    const firstLine = lines[0];
+    const language = firstLine.replace("```", "").trim();
+    const codeContent = lines.slice(1, -1).join("\n");
+    return `<code>${codeContent}</code>`;
+  });
+
+  // Process tool calls FIRST before any HTML processing (Edit, etc.)
+  formatted = renderToolCalls(formatted);
 
   // Handle single backticks for inline code (but not inside code blocks)
   formatted = formatted.replace(/`([^`\n]+)`/g, "<code>$1</code>");
@@ -883,7 +1035,8 @@ function formatMessageContent(content) {
   );
 
   // Now handle standalone file paths - but skip any that are already inside tool-usage divs or code blocks
-  const protectedRegex = /(<div class="tool-usage">.*?<\/div>|<pre><code>.*?<\/code><\/pre>|<code>.*?<\/code>)/gs;
+  const protectedRegex =
+    /(<div class="tool-usage">.*?<\/div>|<pre><code>.*?<\/code><\/pre>|<code>.*?<\/code>)/gs;
   const parts = formatted.split(protectedRegex);
   const protectedParts = formatted.match(protectedRegex) || [];
 
@@ -902,7 +1055,10 @@ function formatMessageContent(content) {
   let protectedIndex = 0;
   for (let i = 0; i < parts.length; i++) {
     formatted += parts[i];
-    if (protectedIndex < protectedParts.length && protectedParts[protectedIndex]) {
+    if (
+      protectedIndex < protectedParts.length &&
+      protectedParts[protectedIndex]
+    ) {
       formatted += protectedParts[protectedIndex];
       protectedIndex++;
     }
@@ -921,7 +1077,6 @@ function formatMessageContent(content) {
 
   return formatted;
 }
-
 
 function formatTodoList(content) {
   try {
@@ -982,7 +1137,13 @@ function formatTodoList(content) {
   }
 }
 
-function updateStreamingMessage(messageId, content, isComplete, messageType, thinkingContent) {
+function updateStreamingMessage(
+  messageId,
+  content,
+  isComplete,
+  messageType,
+  thinkingContent
+) {
   // If manually stopped, ignore streaming updates
   if (isManuallyStopped) {
     return;
@@ -1004,54 +1165,70 @@ function updateStreamingMessage(messageId, content, isComplete, messageType, thi
     if (contentElement) {
       const formattedContent = formatMessageContent(content);
 
-      const isThinking = messageType === 'thinking' || content.trim() === "✱ Thinking..." || content.includes("🧠 Thinking...");
+      const isThinking =
+        messageType === "thinking" ||
+        content.trim() === "✱ Thinking..." ||
+        content.includes("🧠 Thinking...");
 
-      if (messageType === 'thinking' && !isComplete) {
+      if (messageType === "thinking" && !isComplete) {
         // Show thinking content in real-time
-        const wrapper = existingMessage.querySelector(".message-content-wrapper");
+        const wrapper = existingMessage.querySelector(
+          ".message-content-wrapper"
+        );
         let thinkingSection = wrapper.querySelector(".thinking-section");
-        
+
         if (!thinkingSection) {
           // Create thinking section if it doesn't exist
           const thinkingSectionHTML = renderThinkingSection(content, false); // Show expanded during streaming
-          wrapper.insertAdjacentHTML('afterbegin', thinkingSectionHTML);
+          wrapper.insertAdjacentHTML("afterbegin", thinkingSectionHTML);
         } else {
           // Update existing thinking content
-          const thinkingContentInner = thinkingSection.querySelector(".thinking-content-inner");
+          const thinkingContentInner = thinkingSection.querySelector(
+            ".thinking-content-inner"
+          );
           if (thinkingContentInner) {
             thinkingContentInner.innerHTML = formatMessageContent(content);
           }
         }
-        
+
         // Keep main content as thinking indicator
         contentElement.className = "message-content thinking-message";
-        contentElement.innerHTML = '🧠 Thinking...';
+        contentElement.innerHTML = "🧠 Thinking...";
         // Hide copy button during thinking
         if (copyBtn) copyBtn.style.display = "none";
       } else {
         // When complete, ensure thinking section is collapsed
         if (isComplete && thinkingContent) {
-          const wrapper = existingMessage.querySelector(".message-content-wrapper");
+          const wrapper = existingMessage.querySelector(
+            ".message-content-wrapper"
+          );
           let thinkingSection = wrapper.querySelector(".thinking-section");
-          
+
           if (!thinkingSection) {
-            const thinkingSectionHTML = renderThinkingSection(thinkingContent, true); // Collapsed when complete
-            wrapper.insertAdjacentHTML('afterbegin', thinkingSectionHTML);
+            const thinkingSectionHTML = renderThinkingSection(
+              thinkingContent,
+              true
+            ); // Collapsed when complete
+            wrapper.insertAdjacentHTML("afterbegin", thinkingSectionHTML);
           } else {
             // Update to final thinking content and collapse
-            const thinkingContentInner = thinkingSection.querySelector(".thinking-content-inner");
-            const thinkingContentDiv = thinkingSection.querySelector(".thinking-content");
+            const thinkingContentInner = thinkingSection.querySelector(
+              ".thinking-content-inner"
+            );
+            const thinkingContentDiv =
+              thinkingSection.querySelector(".thinking-content");
             if (thinkingContentInner) {
-              thinkingContentInner.innerHTML = formatMessageContent(thinkingContent);
+              thinkingContentInner.innerHTML =
+                formatMessageContent(thinkingContent);
             }
             if (thinkingContentDiv) {
               thinkingContentDiv.style.display = "none";
-              thinkingSection.classList.remove('expanded');
-              thinkingSection.classList.add('collapsed');
+              thinkingSection.classList.remove("expanded");
+              thinkingSection.classList.add("collapsed");
             }
           }
         }
-        
+
         contentElement.className = "message-content";
         contentElement.innerHTML =
           formattedContent +

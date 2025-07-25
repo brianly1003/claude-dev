@@ -40,7 +40,7 @@
 
   .message.assistant & {
     .message-copy-btn {
-      margin-right: 60px;
+      margin-right: $spacing-2xl;
     }
   }
 }
@@ -65,7 +65,7 @@
 }
 
 .message-content {
-  padding: $spacing-md $spacing-lg;
+  padding: $spacing-md;
   border-radius: $radius-md;
   line-height: 1.6;
   position: relative;
@@ -77,14 +77,14 @@
   .message.user & {
     background: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
-    margin-left: 60px;
+    margin-left: $spacing-2xl;
     border-bottom-right-radius: $radius-sm;
   }
 
   .message.assistant & {
     background: var(--vscode-input-background);
     border: 1px solid var(--vscode-input-border);
-    margin-right: 60px;
+    margin-right: $spacing-2xl;
     border-bottom-left-radius: $radius-sm;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     font-weight: normal;
@@ -112,12 +112,17 @@
 // Enhanced Markdown Styling in Messages
 .message {
   // Headers
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     margin: $spacing-lg 0 $spacing-md 0;
     font-weight: $font-weight-semibold;
     line-height: 1.3;
     color: $text-primary;
-    
+
     &:first-child {
       margin-top: 0;
     }
@@ -139,7 +144,9 @@
     font-size: 1.2em;
   }
 
-  h4, h5, h6 {
+  h4,
+  h5,
+  h6 {
     font-size: 1.1em;
   }
 
@@ -147,25 +154,26 @@
   p {
     margin: $spacing-md 0;
     line-height: 1.6;
-    
+
     &:first-child {
       margin-top: 0;
     }
-    
+
     &:last-child {
       margin-bottom: 0;
     }
   }
 
   // Lists
-  ul, ol {
+  ul,
+  ol {
     margin: $spacing-md 0;
     padding-left: $spacing-xl;
-    
+
     &:first-child {
       margin-top: 0;
     }
-    
+
     &:last-child {
       margin-bottom: 0;
     }
@@ -174,9 +182,10 @@
   li {
     margin: $spacing-xs 0;
     line-height: 1.5;
-    
+
     // Nested lists
-    ul, ol {
+    ul,
+    ol {
       margin: $spacing-xs 0;
     }
   }
@@ -188,7 +197,7 @@
     border-left: 4px solid $brand-primary;
     background: rgba(255, 107, 53, 0.05);
     border-radius: 0 $radius-sm $radius-sm 0;
-    
+
     p {
       margin: 0;
       font-style: italic;
@@ -206,7 +215,8 @@
     overflow: hidden;
   }
 
-  th, td {
+  th,
+  td {
     padding: $spacing-sm $spacing-md;
     text-align: left;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -231,7 +241,7 @@
     color: $brand-primary;
     text-decoration: underline;
     transition: color $transition-normal ease;
-    
+
     &:hover {
       color: $brand-secondary;
       text-decoration: none;
@@ -251,13 +261,13 @@
       &[data-task] {
         list-style: none;
         margin-left: -$spacing-md;
-        
+
         &::before {
           content: "☐";
           margin-right: $spacing-xs;
           color: rgba(255, 255, 255, 0.6);
         }
-        
+
         &[data-task="completed"]::before {
           content: "☑";
           color: $state-success;
@@ -280,7 +290,7 @@
     word-wrap: break-word;
     max-width: 100%;
     box-sizing: border-box;
-    
+
     // Code inside pre blocks
     code {
       background: none !important;
@@ -303,7 +313,8 @@
   }
 
   // Strikethrough
-  del, s {
+  del,
+  s {
     text-decoration: line-through;
     opacity: 0.7;
   }
@@ -406,11 +417,11 @@
 // Final Response Container
 .final-response-container {
   position: relative;
-  
+
   .message-copy-btn {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 0;
+    right: 0;
     z-index: 15;
   }
 }
@@ -452,48 +463,48 @@
     font-weight: 500;
     user-select: none;
     transition: background-color 0.2s ease;
-    
+
     &:hover {
       background: rgba(128, 128, 128, 0.08);
     }
-    
+
     .thinking-chevron {
       color: rgba(128, 128, 128, 0.7);
       transition: transform 0.2s ease;
       flex-shrink: 0;
     }
-    
+
     .thinking-brain-icon {
       font-size: 14px;
       flex-shrink: 0;
     }
-    
+
     .thinking-title {
       font-weight: 600;
       color: rgba(128, 128, 128, 1);
     }
-    
+
     .thinking-duration {
       color: rgba(128, 128, 128, 0.7);
       font-size: 12px;
     }
   }
-  
+
   &.expanded {
     .thinking-chevron {
       transform: rotate(90deg);
     }
   }
-  
+
   .thinking-content {
     border-top: 1px solid rgba(128, 128, 128, 0.1);
-    
+
     .thinking-content-inner {
       padding: 12px 16px;
       font-size: 13px;
       line-height: 1.5;
       color: rgba(128, 128, 128, 0.85);
-      
+
       // Style thinking content similar to regular message content
       code {
         background: rgba(128, 128, 128, 0.1);
@@ -502,12 +513,12 @@
         font-family: $font-family-mono;
         font-size: 12px;
       }
-      
+
       strong {
         font-weight: 600;
         color: rgba(128, 128, 128, 1);
       }
-      
+
       em {
         font-style: italic;
       }
@@ -521,4 +532,144 @@
   font-weight: $font-weight-bold;
   animation: blink 1s infinite;
   margin-left: 2px;
+}
+
+// Edit Tool Diff Display
+.edit-tool-diff {
+  margin: 16px 0;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  font-family: $font-family-mono;
+  font-size: 13px;
+
+  .diff-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(128, 128, 128, 0.05);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+    font-weight: 600;
+    color: var(--vscode-foreground);
+
+    .diff-icon {
+      font-size: 14px;
+    }
+
+    .diff-tool-name {
+      color: #007acc;
+      font-weight: 700;
+    }
+
+    .diff-file-path {
+      color: rgba(128, 128, 128, 0.8);
+      font-weight: 400;
+      font-size: 12px;
+    }
+  }
+
+  .diff-content {
+    background: var(--vscode-editor-background, #1e1e1e);
+  }
+
+  .diff-line {
+    display: flex;
+    align-items: flex-start;
+    line-height: 1.4;
+    min-height: 20px;
+    font-family: $font-family-mono;
+    font-size: 12px;
+
+    .diff-marker {
+      display: inline-block;
+      width: 20px;
+      text-align: center;
+      font-weight: bold;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .diff-text {
+      flex: 1;
+      padding: 2px 8px 2px 4px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    // Removed lines (red background)
+    &.removed {
+      background: rgba(248, 81, 73, 0.15);
+      border-left: 3px solid #f85149;
+
+      .diff-marker {
+        color: #f85149;
+        background: rgba(248, 81, 73, 0.2);
+      }
+
+      .diff-text {
+        color: var(--vscode-foreground);
+        background: rgba(248, 81, 73, 0.1);
+      }
+    }
+
+    // Added lines (blue background)
+    &.added {
+      background: rgba(63, 185, 80, 0.15);
+      border-left: 3px solid #3fb950;
+
+      .diff-marker {
+        color: #3fb950;
+        background: rgba(63, 185, 80, 0.2);
+      }
+
+      .diff-text {
+        color: var(--vscode-foreground);
+        background: rgba(63, 185, 80, 0.1);
+      }
+    }
+  }
+}
+
+// Tool Call Display (for non-Edit tools)
+.tool-call-display {
+  margin: 12px 0;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 6px;
+  background: rgba(128, 128, 128, 0.03);
+
+  .tool-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(128, 128, 128, 0.05);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
+    font-weight: 600;
+    font-size: 13px;
+
+    .tool-icon {
+      font-size: 14px;
+    }
+
+    .tool-name {
+      color: #007acc;
+    }
+  }
+
+  .tool-input {
+    padding: 12px;
+
+    pre {
+      background: none;
+      margin: 0;
+      padding: 0;
+      font-family: $font-family-mono;
+      font-size: 12px;
+      color: rgba(128, 128, 128, 0.9);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  }
 }
