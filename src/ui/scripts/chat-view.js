@@ -1573,6 +1573,360 @@ function copyMessage(messageId) {
     });
 }
 
+// === Enhanced Prompt Templates ===
+
+let enhancePromptTemplates = [];
+let selectedTemplateId = 'none';
+
+function loadEnhancePromptTemplates() {
+  vscode.postMessage({ type: "getEnhancePromptTemplates" });
+}
+
+function saveEnhancePromptTemplates() {
+  vscode.postMessage({ 
+    type: "saveEnhancePromptTemplates",
+    templates: enhancePromptTemplates
+  });
+}
+
+function renderTemplateList() {
+  const templateList = document.getElementById("templateList");
+  const templateCount = document.getElementById("templateCount");
+  
+  if (enhancePromptTemplates.length === 0) {
+    templateList.innerHTML = `
+      <div class="template-empty-state">
+        <div class="template-empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+            <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/>
+            <path d="m14 7 3 3"/>
+            <path d="M5 6v4"/>
+            <path d="M19 14v4"/>
+            <path d="M10 2v2"/>
+            <path d="M7 8H3"/>
+            <path d="M21 16h-4"/>
+            <path d="M11 3H9"/>
+          </svg>
+        </div>
+        <h4>No templates yet</h4>
+        <p>Create your first template to get started</p>
+      </div>
+    `;
+  } else {
+    templateList.innerHTML = enhancePromptTemplates.map(template => `
+      <div class="template-item" data-template-id="${template.id}">
+        <div class="template-header">
+          <div class="template-name">${template.name}</div>
+          <div class="template-actions">
+            <button class="template-action-btn edit" onclick="editTemplate('${template.id}')" title="Edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="template-action-btn delete" onclick="deleteTemplate('${template.id}')" title="Delete">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="template-description">${template.description}</div>
+        <div class="template-content-preview">${template.content.substring(0, 100)}${template.content.length > 100 ? '...' : ''}</div>
+      </div>
+    `).join('');
+  }
+  
+  if (templateCount) {
+    templateCount.textContent = `${enhancePromptTemplates.length}/10`;
+  }
+}
+
+function renderTemplateDropdown() {
+  const dropdownContent = document.getElementById("templateDropdownContent");
+  const templateCount = document.getElementById("templateCount");
+  
+  if (!dropdownContent) return;
+  
+  let dropdownHTML = `
+    <div class="template-option" data-template-id="none">
+      <div class="template-option-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 12h8"/>
+        </svg>
+      </div>
+      <div class="template-option-info">
+        <div class="template-option-name">No Template</div>
+        <div class="template-option-desc">Simple grammar correction</div>
+      </div>
+    </div>
+  `;
+  
+  if (enhancePromptTemplates.length > 0) {
+    dropdownHTML += enhancePromptTemplates.map(template => `
+      <div class="template-option" data-template-id="${template.id}">
+        <div class="template-option-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/>
+            <path d="m14 7 3 3"/>
+          </svg>
+        </div>
+        <div class="template-option-info">
+          <div class="template-option-name">${template.name}</div>
+          <div class="template-option-desc">${template.description}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  dropdownContent.innerHTML = dropdownHTML;
+  
+  // Add click handlers for template options
+  dropdownContent.querySelectorAll('.template-option').forEach(option => {
+    option.addEventListener('click', () => {
+      const templateId = option.getAttribute('data-template-id');
+      selectTemplate(templateId);
+    });
+  });
+  
+  if (templateCount) {
+    templateCount.textContent = `${enhancePromptTemplates.length}/10`;
+  }
+  
+  updateSelectedTemplate();
+}
+
+function selectTemplate(templateId) {
+  selectedTemplateId = templateId;
+  updateSelectedTemplate();
+  updateTemplateSelectorButton();
+  hideTemplateDropdown();
+}
+
+function updateSelectedTemplate() {
+  const options = document.querySelectorAll('.template-option');
+  options.forEach(option => {
+    const isSelected = option.getAttribute('data-template-id') === selectedTemplateId;
+    option.classList.toggle('selected', isSelected);
+  });
+}
+
+function updateTemplateSelectorButton() {
+  const selectorBtn = document.getElementById("templateSelectorBtn");
+  if (selectedTemplateId !== 'none') {
+    selectorBtn.classList.add("template-selected");
+  } else {
+    selectorBtn.classList.remove("template-selected");
+  }
+}
+
+function showTemplateDropdown() {
+  const dropdown = document.getElementById("templateDropdown");
+  const selectorBtn = document.getElementById("templateSelectorBtn");
+  dropdown.classList.add("visible");
+  selectorBtn.classList.add("active");
+}
+
+function hideTemplateDropdown() {
+  const dropdown = document.getElementById("templateDropdown");
+  const selectorBtn = document.getElementById("templateSelectorBtn");
+  dropdown.classList.remove("visible");
+  selectorBtn.classList.remove("active");
+}
+
+function toggleTemplateDropdown() {
+  const dropdown = document.getElementById("templateDropdown");
+  if (dropdown.classList.contains("visible")) {
+    hideTemplateDropdown();
+  } else {
+    showTemplateDropdown();
+  }
+}
+
+function addTemplate() {
+  showTemplateModal();
+}
+
+function editTemplate(templateId) {
+  const template = enhancePromptTemplates.find(t => t.id === templateId);
+  if (template) {
+    showTemplateModal(template);
+  }
+}
+
+function deleteTemplate(templateId) {
+  if (confirm('Are you sure you want to delete this template?')) {
+    enhancePromptTemplates = enhancePromptTemplates.filter(t => t.id !== templateId);
+    saveEnhancePromptTemplates();
+    renderTemplateList();
+    renderTemplateDropdown();
+    
+    // Reset selected template if it was deleted
+    if (selectedTemplateId === templateId) {
+      selectedTemplateId = 'none';
+      updateSelectedTemplate();
+    }
+  }
+}
+
+function showTemplateModal(existingTemplate = null) {
+  const isEditing = !!existingTemplate;
+  
+  // Create modal HTML
+  const modalHTML = `
+    <div class="template-modal-overlay" id="templateModalOverlay">
+      <div class="template-modal">
+        <div class="template-modal-header">
+          <h2 class="template-modal-title">${isEditing ? 'Edit Template' : 'Add Template'}</h2>
+          <button class="template-close-button" id="templateCloseBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.3 5.71c-.39-.39-1.02-.39-1.41 0L12 10.59 7.11 5.7c-.39-.39-1.02-.39-1.41 0s-.39 1.02 0 1.41L10.59 12 5.7 16.89c-.39.39-.39 1.02 0 1.41s1.02.39 1.41 0L12 13.41l4.89 4.88c.39.39 1.02.39 1.41 0s.39-1.02 0-1.41L13.41 12l4.88-4.89c.39-.39.39-1.02.01-1.4z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="template-modal-content">
+          <form class="template-form" id="templateForm">
+            <div class="template-form-row">
+              <label class="template-form-label" for="templateName">
+                Template Name <span class="template-required">*</span>
+              </label>
+              <input
+                type="text"
+                id="templateName"
+                name="templateName"
+                class="template-form-input"
+                placeholder="e.g., Code Review"
+                value="${existingTemplate ? existingTemplate.name : ''}"
+                required
+              />
+            </div>
+            
+            <div class="template-form-row">
+              <label class="template-form-label" for="templateDescription">
+                Description <span class="template-required">*</span>
+              </label>
+              <input
+                type="text"
+                id="templateDescription"
+                name="templateDescription"
+                class="template-form-input"
+                placeholder="e.g., Review code for quality and best practices"
+                value="${existingTemplate ? existingTemplate.description : ''}"
+                required
+              />
+            </div>
+            
+            <div class="template-form-row">
+              <label class="template-form-label" for="templateContent">
+                Template Content <span class="template-required">*</span>
+              </label>
+              <textarea
+                id="templateContent"
+                name="templateContent"
+                class="template-form-textarea"
+                rows="8"
+                placeholder="Enter the template content. Use {userInput} as a placeholder for the user's input."
+                required
+              >${existingTemplate ? existingTemplate.content : ''}</textarea>
+              <div class="template-form-help">
+                Use {userInput} as a placeholder where the user's original prompt should be inserted.
+              </div>
+            </div>
+            
+            <div class="template-form-actions">
+              <button type="button" class="template-form-cancel" id="cancelTemplate">
+                Cancel
+              </button>
+              <button type="submit" class="template-form-submit" id="saveTemplate">
+                ${isEditing ? 'Update Template' : 'Add Template'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remove existing modal if any
+  const existingModal = document.getElementById('templateModalOverlay');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  // Add modal to body
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  const modal = document.getElementById('templateModalOverlay');
+  const form = document.getElementById('templateForm');
+  const closeBtn = document.getElementById('templateCloseBtn');
+  const cancelBtn = document.getElementById('cancelTemplate');
+  
+  // Show modal
+  setTimeout(() => modal.classList.add('visible'), 10);
+  
+  // Event handlers
+  closeBtn.addEventListener('click', hideTemplateModal);
+  cancelBtn.addEventListener('click', hideTemplateModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) hideTemplateModal();
+  });
+  
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveTemplateFromForm(existingTemplate);
+  });
+  
+  // Focus on name field
+  document.getElementById('templateName').focus();
+}
+
+function hideTemplateModal() {
+  const modal = document.getElementById('templateModalOverlay');
+  if (modal) {
+    modal.classList.remove('visible');
+    setTimeout(() => modal.remove(), 300);
+  }
+}
+
+function saveTemplateFromForm(existingTemplate = null) {
+  const name = document.getElementById('templateName').value.trim();
+  const description = document.getElementById('templateDescription').value.trim();
+  const content = document.getElementById('templateContent').value.trim();
+  
+  if (!name || !description || !content) {
+    alert('Please fill in all required fields.');
+    return;
+  }
+  
+  const template = {
+    id: existingTemplate ? existingTemplate.id : Date.now().toString(),
+    name,
+    description,
+    content
+  };
+  
+  if (existingTemplate) {
+    // Update existing template
+    const index = enhancePromptTemplates.findIndex(t => t.id === existingTemplate.id);
+    if (index !== -1) {
+      enhancePromptTemplates[index] = template;
+    }
+  } else {
+    // Add new template
+    if (enhancePromptTemplates.length >= 10) {
+      alert('Maximum of 10 templates allowed.');
+      return;
+    }
+    enhancePromptTemplates.push(template);
+  }
+  
+  saveEnhancePromptTemplates();
+  renderTemplateList();
+  renderTemplateDropdown();
+  hideTemplateModal();
+}
+
 // === Settings ===
 
 function syncUISettings(settings) {
@@ -1588,6 +1942,11 @@ function syncUISettings(settings) {
   }
   if (settings.thinkingMode) {
     document.getElementById("thinkingSelect").value = settings.thinkingMode;
+  }
+  if (settings.enhancePromptTemplates) {
+    enhancePromptTemplates = settings.enhancePromptTemplates;
+    renderTemplateList();
+    renderTemplateDropdown();
   }
 }
 
@@ -1753,13 +2112,106 @@ enhancePromptButton.addEventListener("click", () => {
     enhancePromptButton.classList.add("processing");
     enhancePromptButton.disabled = true;
     
+    // Get selected template
+    let templateContent = null;
+    if (selectedTemplateId !== 'none') {
+      const selectedTemplate = enhancePromptTemplates.find(t => t.id === selectedTemplateId);
+      if (selectedTemplate) {
+        templateContent = selectedTemplate.content;
+      }
+    }
+    
     // Send message to extension to enhance the prompt
     vscode.postMessage({
       type: "enhancePrompt",
-      text: currentText
+      text: currentText,
+      templateContent: templateContent
     });
   }
 });
+
+// Template Selector Button
+const templateSelectorBtn = document.getElementById("templateSelectorBtn");
+templateSelectorBtn.addEventListener("click", toggleTemplateDropdown);
+
+// Click outside to close template dropdown
+document.addEventListener("click", (e) => {
+  const templateDropdown = document.getElementById("templateDropdown");
+  const templateSelectorBtn = document.getElementById("templateSelectorBtn");
+  
+  if (!templateDropdown.contains(e.target) && !templateSelectorBtn.contains(e.target)) {
+    hideTemplateDropdown();
+  }
+});
+
+// Settings Modal
+const settingsButton = document.getElementById("settingsButton");
+const settingsModalOverlay = document.getElementById("settingsModalOverlay");
+const settingsDoneBtn = document.getElementById("settingsDoneBtn");
+const settingsSaveBtn = document.getElementById("settingsSaveBtn");
+
+settingsButton.addEventListener("click", showSettingsModal);
+settingsDoneBtn.addEventListener("click", hideSettingsModal);
+settingsSaveBtn.addEventListener("click", saveSettings);
+
+settingsModalOverlay.addEventListener("click", (e) => {
+  if (e.target === settingsModalOverlay) {
+    hideSettingsModal();
+  }
+});
+
+// Settings Category Navigation
+document.querySelectorAll('.settings-category').forEach(category => {
+  category.addEventListener('click', () => {
+    const categoryName = category.getAttribute('data-category');
+    showSettingsCategory(categoryName);
+  });
+});
+
+// Add Template Button
+document.getElementById("addTemplateBtn").addEventListener("click", addTemplate);
+
+function showSettingsModal() {
+  settingsModalOverlay.classList.add("visible");
+  // Default to enhance-prompt category
+  showSettingsCategory('enhance-prompt');
+  // Load templates
+  loadEnhancePromptTemplates();
+}
+
+function hideSettingsModal() {
+  settingsModalOverlay.classList.remove("visible");
+}
+
+function saveSettings() {
+  // Save any pending changes
+  saveEnhancePromptTemplates();
+  
+  // Show brief feedback
+  const saveBtn = document.getElementById("settingsSaveBtn");
+  const originalText = saveBtn.textContent;
+  saveBtn.textContent = "Saved!";
+  saveBtn.disabled = true;
+  
+  setTimeout(() => {
+    saveBtn.textContent = originalText;
+    saveBtn.disabled = false;
+  }, 1500);
+}
+
+function showSettingsCategory(categoryName) {
+  // Update sidebar selection
+  document.querySelectorAll('.settings-category').forEach(cat => {
+    cat.classList.remove('active');
+  });
+  document.querySelector(`[data-category="${categoryName}"]`).classList.add('active');
+  
+  // Show corresponding panel
+  document.querySelectorAll('.settings-panel').forEach(panel => {
+    panel.style.display = 'none';
+  });
+  document.getElementById(`${categoryName}-panel`).style.display = 'block';
+}
 
 // Model Controls
 let currentSelectedModel = "default";
@@ -1956,6 +2408,14 @@ window.addEventListener("message", (event) => {
         updateInputTokenCount();
       }, 10);
       break;
+    case "enhancePromptTemplates":
+      enhancePromptTemplates = message.templates || [];
+      renderTemplateList();
+      renderTemplateDropdown();
+      break;
+    case "enhancePromptTemplatesSaved":
+      // Template save confirmation - could add visual feedback here if needed
+      break;
   }
 });
 
@@ -1968,12 +2428,17 @@ hideMCPModal();
 hideCustomServerForm();
 hideHistoryModal();
 hideModelDropdown();
+hideTemplateDropdown();
 
 // Auto-focus the input field on first load
 messageInput.focus();
 
 vscode.postMessage({ type: "requestSettings" });
 vscode.postMessage({ type: "requestConversation" });
+loadEnhancePromptTemplates();
+
+// Initialize templates dropdown on first load
+renderTemplateDropdown();
 
 // Mark as initialized after a short delay to ensure all initial messages are processed
 setTimeout(() => {

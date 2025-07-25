@@ -129,7 +129,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           await this.stopGeneration();
           break;
         case "enhancePrompt":
-          await this.handleEnhancePrompt(data.text);
+          await this.handleEnhancePrompt(data.text, data.templateContent);
+          break;
+        case "getEnhancePromptTemplates":
+          await this.sendEnhancePromptTemplates();
+          break;
+        case "saveEnhancePromptTemplates":
+          await this.saveEnhancePromptTemplates(data.templates);
           break;
         case "requestTemplates":
           await this.sendTemplates();
@@ -260,37 +266,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   }
 
 
-  private async handleEnhancePrompt(text: string) {
+  private async handleEnhancePrompt(text: string, templateContent?: string) {
     try {
-      // Get the selected template or fall back to default
-      const selectedTemplateId = this.templateManager.getSelectedTemplateId();
-      let selectedTemplate = null;
-      
-      if (selectedTemplateId) {
-        selectedTemplate = this.templateManager.getTemplate(selectedTemplateId);
-        // If selected template is not active, fall back to default
-        if (selectedTemplate && !selectedTemplate.isActive) {
-          selectedTemplate = null;
-        }
-      }
-      
-      // If no selected template, use default
-      if (!selectedTemplate) {
-        selectedTemplate = this.templateManager.getDefaultTemplate();
-      }
-      
       let enhancedPrompt: string;
       
-      if (selectedTemplate) {
-        // Use template-based enhancement
+      if (templateContent) {
+        // Use provided template content
+        const promptWithTemplate = templateContent.replace('{userInput}', text);
         const completionRequest: CompletionRequest = {
-          prompt: `${selectedTemplate.template}
+          prompt: `Please enhance the following prompt according to the template structure provided. Apply the template while improving clarity, grammar, and effectiveness:
 
-Please transform the following user input according to the template structure above. Fill in the appropriate sections based on the provided information. If specific details are not provided, use reasonable placeholders or mark as "To be determined".
+Template-enhanced prompt: "${promptWithTemplate}"
 
-User input: "${text}"
-
-Please provide only the structured output following the template format, without any additional explanation or commentary:`,
+Please provide only the enhanced, polished version without any additional explanation:`,
           context: "",
           language: "text",
         };
@@ -317,7 +305,7 @@ Please provide only the structured output following the template format, without
           type: "enhancedPrompt",
           enhancedText: enhancedPrompt,
           success: true,
-          templateUsed: selectedTemplate?.name || null
+          templateUsed: templateContent ? 'Custom Template' : null
         });
       }
     } catch (error) {
@@ -958,9 +946,11 @@ Please provide only the structured output following the template format, without
 
   private sendCurrentSettings() {
     const config = vscode.workspace.getConfiguration("claudeDev");
+    const context = this.conversationManager.getContext();
     const settings = {
       model: config.get<string>("model", "default"),
       thinkingMode: config.get<string>("thinkingMode", "none"),
+      enhancePromptTemplates: context.globalState.get<any[]>("enhancePromptTemplates", []),
     };
 
     if (this._view) {
@@ -1382,6 +1372,53 @@ Please provide only the structured output following the template format, without
       this._view.webview.postMessage({
         type: "settingsSaved"
       });
+    }
+  }
+
+  private async sendEnhancePromptTemplates() {
+    try {
+      // Use extension global state instead of VSCode settings
+      const context = this.conversationManager.getContext();
+      const templates = context.globalState.get<any[]>("enhancePromptTemplates", []);
+      
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "enhancePromptTemplates",
+          templates: templates
+        });
+      }
+    } catch (error) {
+      console.error("Error sending enhance prompt templates:", error);
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "enhancePromptTemplates",
+          templates: []
+        });
+      }
+    }
+  }
+
+  private async saveEnhancePromptTemplates(templates: any[]) {
+    try {
+      // Use extension global state instead of VSCode settings
+      const context = this.conversationManager.getContext();
+      await context.globalState.update("enhancePromptTemplates", templates);
+      
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "enhancePromptTemplatesSaved",
+          success: true
+        });
+      }
+    } catch (error) {
+      console.error("Error saving enhance prompt templates:", error);
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "enhancePromptTemplatesSaved",
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
     }
   }
 

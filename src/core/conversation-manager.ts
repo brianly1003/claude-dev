@@ -27,8 +27,10 @@ export class ConversationManager {
   private storageUri: vscode.Uri;
   private currentConversation: Conversation | null = null;
   private conversationIndex: ConversationMetadata[] = [];
+  private context: vscode.ExtensionContext;
 
   constructor(context: vscode.ExtensionContext) {
+    this.context = context;
     this.storageUri = vscode.Uri.joinPath(context.globalStorageUri, 'conversations');
     this.ensureStorageDirectory();
     this.loadConversationIndex().then(() => {
@@ -334,6 +336,11 @@ export class ConversationManager {
     }
 
     return context;
+  }
+
+  // Get VSCode extension context for global state access
+  public getContext(): vscode.ExtensionContext {
+    return this.context;
   }
 
 }

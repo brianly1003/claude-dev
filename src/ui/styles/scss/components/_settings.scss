@@ -290,24 +290,45 @@
 }
 
 .template-action-btn {
-  padding: 4px 8px;
+  @include flex-center;
+  padding: 6px;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.7);
   border-radius: $radius-sm;
-  font-size: 11px;
   cursor: pointer;
   transition: all $transition-normal $easing-default;
+  width: 28px;
+  height: 28px;
 
   &:hover {
     background: rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.1);
   }
 
-  &.danger:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #ef4444;
+  &.edit:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+  }
+
+  &.delete {
+    color: rgba(239, 68, 68, 0.7);
+    border-color: rgba(239, 68, 68, 0.2);
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+      transform: scale(1.1);
+    }
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
   }
 }
 
@@ -315,6 +336,18 @@
   font-size: $font-size-sm;
   color: rgba(255, 255, 255, 0.6);
   margin-bottom: $spacing-sm;
+}
+
+.template-content-preview {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--vscode-editor-font-family, "Consolas", "Monaco", "Courier New", monospace);
+  background: rgba(0, 0, 0, 0.2);
+  padding: $spacing-sm;
+  border-radius: $radius-sm;
+  margin-top: $spacing-sm;
+  border-left: 3px solid rgba(255, 107, 53, 0.3);
+  line-height: 1.4;
 }
 
 .template-category {

@@ -185,15 +185,87 @@
   }
 
   @include respond-to("xs") {
-    width: 24px;
-    height: 24px;
-    padding: 3px;
-    left: 6px;
+    left: 2px;
+  }
+}
+
+// Template Selector Button
+#templateSelectorBtn {
+  position: absolute;
+  right: $spacing-sm;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: none;
+  color: rgba(255, 255, 255, 0.5);
+  width: 16px;
+  height: 28px;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  transition: all $transition-normal $easing-default;
+  z-index: 2;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: translateY(-50%) scale(0.98);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  }
+
+  // Active state for dropdown open (arrow rotation)
+  &.active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
 
     svg {
-      width: 15px;
-      height: 15px;
+      transform: rotate(180deg);
     }
+  }
+
+  // Template selected state (orange highlight)
+  &.template-selected {
+    background: rgba(255, 107, 53, 0.1);
+    border-color: rgba(255, 107, 53, 0.3);
+    color: rgba(255, 107, 53, 0.9);
+
+    &:hover {
+      background: rgba(255, 107, 53, 0.15);
+      border-color: rgba(255, 107, 53, 0.4);
+      color: rgba(255, 107, 53, 1);
+      transform: translateY(-50%) scale(1.05);
+      box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+    }
+
+    &.active {
+      background: rgba(255, 107, 53, 0.15);
+      border-color: rgba(255, 107, 53, 0.4);
+      color: rgba(255, 107, 53, 1);
+
+      svg {
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: all $transition-normal $easing-default;
+  }
+
+  @include respond-to("xs") {
+    right: 6px;
   }
 }
 

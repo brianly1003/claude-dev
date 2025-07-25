@@ -199,3 +199,144 @@
   color: $brand-primary;
   font-weight: $font-weight-semibold;
 }
+
+// Template Modal
+.template-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  @include flex-center;
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all $transition-normal $easing-default;
+  
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+    
+    .template-modal {
+      transform: scale(1) translateY(0);
+    }
+  }
+}
+
+.template-modal {
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  background: $bg-primary;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.9) translateY(20px);
+  transition: all $transition-normal $easing-default;
+}
+
+.template-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg;
+  background: var(--vscode-titleBar-activeBackground);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.template-modal-title {
+  font-size: 18px;
+  font-weight: $font-weight-semibold;
+  color: $text-primary;
+  margin: 0;
+}
+
+.template-close-button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 24px;
+  cursor: pointer;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  transition: all $transition-normal $easing-default;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.template-modal-content {
+  padding: $spacing-lg;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.template-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.template-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.template-form-label {
+  font-size: 12px;
+  font-weight: $font-weight-medium;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.template-required {
+  color: $state-error;
+}
+
+.template-form-input,
+.template-form-textarea {
+  @include input-field;
+  width: 100%;
+}
+
+.template-form-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: var(--vscode-editor-font-family, "Consolas", "Monaco", "Courier New", monospace);
+}
+
+.template-form-help {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: $spacing-xs;
+}
+
+.template-form-actions {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: flex-end;
+  padding-top: $spacing-md;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.template-form-cancel {
+  @include button-secondary;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.template-form-submit {
+  @include button-primary;
+  min-width: 100px;
+  justify-content: center;
+}
