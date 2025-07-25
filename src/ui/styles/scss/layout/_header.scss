@@ -8,12 +8,13 @@
 
 .chat-header {
   @include flex-center(row, $spacing-sm);
-  justify-content: center;
+  justify-content: space-between;
   padding: $spacing-sm $spacing-md;
   background: var(--vscode-titleBar-activeBackground);
   border-bottom: 1px solid $border-primary;
   backdrop-filter: blur(10px);
   height: $header-height;
+  position: relative;
 }
 
 .chat-title {
@@ -57,5 +58,41 @@
   .mcp-btn-text {
     font-size: $font-size-md;
     font-weight: $font-weight-medium;
+  }
+}
+
+.header-actions {
+  @include flex-center(row, $spacing-xs);
+}
+
+.header-button {
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  border-radius: $radius-sm;
+  transition: all $transition-normal $easing-default;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: transform $transition-normal $easing-default;
+  }
+  
+  &:hover svg {
+    transform: rotate(90deg);
   }
 }

@@ -70,9 +70,9 @@ export class ClaudeCodeService {
       this.log(`Sending prompt: ${prompt.substring(0, 100)}...`);
       
       if (this.config.yoloMode !== false) {
-        this.log(`YOLO Mode enabled - using flags: --dangerously-skip-permissions, --permission-mode bypassPermissions, --add-dir ${this.getCurrentWorkingDirectory()}, --verbose, --allowedTools [all tools]`);
+        this.log(`YOLO Mode enabled - SECURE: --add-dir ${this.getCurrentWorkingDirectory()}, --permission-mode allowPermissions, --allowedTools [workspace-safe tools only]`);
       } else {
-        this.log(`YOLO Mode disabled - user will be prompted for permissions`);
+        this.log(`YOLO Mode disabled - user will be prompted for all permissions`);
       }
 
       this.currentAbortController = new AbortController();
@@ -83,18 +83,24 @@ export class ClaudeCodeService {
 
       try {
         const execArgs = [];
+        const workspaceDir = this.getCurrentWorkingDirectory();
+        
+        // SECURITY: Only allow access to the workspace directory
+        execArgs.push('--add-dir');
+        execArgs.push(workspaceDir);
+        
+        // SECURITY: Restrict tools to workspace-safe operations only
+        execArgs.push('--allowedTools');
+        execArgs.push('LS,Read,Edit,Write,Glob,Grep,MultiEdit,NotebookRead,NotebookEdit');
+        
+        // SECURITY: Do NOT use dangerously-skip-permissions or bypassPermissions
+        // This ensures Claude Code will prompt for file operations outside workspace
+        
         if (this.config.yoloMode !== false) {
-          execArgs.push('--dangerously-skip-permissions');
+          // Only enable limited auto-permissions for workspace operations
           execArgs.push('--permission-mode');
-          execArgs.push('bypassPermissions');
-          // Also try adding workspace directory explicitly
-          execArgs.push('--add-dir');
-          execArgs.push(this.getCurrentWorkingDirectory());
-          // Add verbose mode to see what's happening
+          execArgs.push('allowPermissions');
           execArgs.push('--verbose');
-          // Try additional permission-related flags
-          execArgs.push('--allowedTools');
-          execArgs.push('Bash,LS,Read,Edit,Write,Glob,Grep,Task,MultiEdit,NotebookRead,NotebookEdit');
         }
         
         // Add model selection
@@ -113,16 +119,16 @@ export class ClaudeCodeService {
           prompt: prompt,
           abortController: this.currentAbortController,
           options: {
-            // Based on GitHub research - try different permission approaches
-            allowedTools: ['Bash', 'LS', 'Read', 'Edit', 'Write', 'Glob', 'Grep', 'Task', 'MultiEdit', 'NotebookRead', 'NotebookEdit'],
-            useCommitSigning: false, // Disable to allow more Bash operations
+            // SECURITY: Only allow workspace-safe tools, NO Bash or Task tools
+            allowedTools: ['LS', 'Read', 'Edit', 'Write', 'Glob', 'Grep', 'MultiEdit', 'NotebookRead', 'NotebookEdit'],
+            useCommitSigning: false,
           },
           cwd: this.getCurrentWorkingDirectory(),
-          // Pass CLI arguments through executableArgs (like claude-code-chat does)
+          // Pass CLI arguments through executableArgs
           executableArgs: execArgs,
-          // Try additional SDK-level permission settings
-          dangerouslySkipPermissions: true,
-          permissionMode: 'bypassPermissions',
+          // SECURITY: Remove dangerous permission bypasses
+          // dangerouslySkipPermissions: false (default)
+          // permissionMode: 'default' (will prompt for external access)
         };
 
         // Always set pathToClaudeCodeExecutable to force CLI usage
@@ -296,15 +302,20 @@ export class ClaudeCodeService {
     if (request.language === "text" || !request.context.includes("---")) {
       // This is a chat request, not a code completion
       // Based on GitHub research - add explicit permission context
-      return `You are Claude Dev, an AI coding assistant integrated with VSCode. 
+      return `You are Claude Dev, an AI coding assistant integrated with VSCode.
 
-IMPORTANT: You have full access to the workspace at ${this.getCurrentWorkingDirectory()}. All tools including Bash, file reading, and editing are explicitly permitted. Do not ask for permissions - proceed directly with any necessary actions.
+IMPORTANT SECURITY CONSTRAINTS:
+- You can ONLY access files within the current workspace: ${this.getCurrentWorkingDirectory()}
+- You can read, edit, search, and list files within this workspace
+- You CANNOT access files outside this workspace directory  
+- You CANNOT run bash commands or access system files
+- All operations must stay within the project boundaries
 
 User request: ${request.prompt}
 
 Workspace context: ${request.context}
 
-Please help with this request by taking any necessary actions directly.`;
+Please help with this request using only workspace-safe file operations.`;
     }
 
     return `Complete the following ${request.language} code. Provide only the completion, no explanations:

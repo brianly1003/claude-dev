@@ -7,6 +7,7 @@ import {
 import { ConversationManager } from "../../core/conversation-manager";
 import { UITestService } from "../../features/ui-testing/ui-test-service";
 import { HtmlTemplateService } from "./html-template-service";
+import { TemplateManager } from "../../core/template-manager";
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "claudeDevChat";
@@ -15,18 +16,21 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private conversationManager: ConversationManager;
   private uiTestService: UITestService;
   private htmlTemplateService: HtmlTemplateService;
+  private templateManager: TemplateManager;
   private streamingMessageId: string | null = null;
   private isGenerating: boolean = false;
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
     claudeCodeService: ClaudeCodeService,
-    context: vscode.ExtensionContext
+    context: vscode.ExtensionContext,
+    templateManager: TemplateManager
   ) {
     this.claudeCodeService = claudeCodeService;
     this.conversationManager = new ConversationManager(context);
     this.uiTestService = new UITestService(claudeCodeService);
     this.htmlTemplateService = new HtmlTemplateService(_extensionUri);
+    this.templateManager = templateManager;
     this.loadMostRecentConversation();
   }
 
@@ -127,6 +131,24 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         case "enhancePrompt":
           await this.handleEnhancePrompt(data.text);
           break;
+        case "requestTemplates":
+          await this.sendTemplates();
+          break;
+        case "createTemplate":
+          await this.createTemplate(data.data);
+          break;
+        case "updateTemplate":
+          await this.updateTemplate(data.data);
+          break;
+        case "deleteTemplate":
+          await this.deleteTemplate(data.data);
+          break;
+        case "selectTemplate":
+          await this.selectTemplate(data.templateId);
+          break;
+        case "saveSettings":
+          await this.saveSettings();
+          break;
         default:
           console.log("Unhandled message type:", data.type, data);
           break;
@@ -151,6 +173,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       await this.updateWebview();
       return;
     }
+
+    // Check if this is a simple informational query
+    console.log('Checking for simple queries with message:', processedMessage);
+    const simpleResponse = this.handleSimpleQueries(processedMessage);
+    if (simpleResponse) {
+      console.log('Simple query handled, response:', simpleResponse);
+      this.conversationManager.addMessage("assistant", simpleResponse);
+      await this.updateWebview();
+      return;
+    }
+    console.log('No simple query match, proceeding to AI model');
 
     // Check if this is an MCP/UI testing request
     if (this.shouldRoutToMCPHandler(processedMessage)) {
@@ -229,23 +262,62 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   private async handleEnhancePrompt(text: string) {
     try {
-      // Use Claude Code SDK to enhance the prompt with grammar correction
-      const completionRequest: CompletionRequest = {
-        prompt: `Please improve the following prompt by correcting any grammar, spelling, or punctuation errors. Make it clearer and more concise while preserving the original intent. Only return the improved prompt without any explanation or additional text:
+      // Get the selected template or fall back to default
+      const selectedTemplateId = this.templateManager.getSelectedTemplateId();
+      let selectedTemplate = null;
+      
+      if (selectedTemplateId) {
+        selectedTemplate = this.templateManager.getTemplate(selectedTemplateId);
+        // If selected template is not active, fall back to default
+        if (selectedTemplate && !selectedTemplate.isActive) {
+          selectedTemplate = null;
+        }
+      }
+      
+      // If no selected template, use default
+      if (!selectedTemplate) {
+        selectedTemplate = this.templateManager.getDefaultTemplate();
+      }
+      
+      let enhancedPrompt: string;
+      
+      if (selectedTemplate) {
+        // Use template-based enhancement
+        const completionRequest: CompletionRequest = {
+          prompt: `${selectedTemplate.template}
+
+Please transform the following user input according to the template structure above. Fill in the appropriate sections based on the provided information. If specific details are not provided, use reasonable placeholders or mark as "To be determined".
+
+User input: "${text}"
+
+Please provide only the structured output following the template format, without any additional explanation or commentary:`,
+          context: "",
+          language: "text",
+        };
+
+        const response = await this.claudeCodeService.getCompletion(completionRequest);
+        enhancedPrompt = response.suggestion.trim();
+      } else {
+        // Fallback to simple grammar correction if no template exists
+        const completionRequest: CompletionRequest = {
+          prompt: `Please improve the following prompt by correcting any grammar, spelling, or punctuation errors. Make it clearer and more concise while preserving the original intent. Only return the improved prompt without any explanation or additional text:
 
 "${text}"`,
-        context: "",
-        language: "text",
-      };
+          context: "",
+          language: "text",
+        };
 
-      const response = await this.claudeCodeService.getCompletion(completionRequest);
+        const response = await this.claudeCodeService.getCompletion(completionRequest);
+        enhancedPrompt = response.suggestion.trim();
+      }
       
       // Send the enhanced prompt back to the webview
       if (this._view) {
         this._view.webview.postMessage({
           type: "enhancedPrompt",
-          enhancedText: response.suggestion.trim(),
-          success: true
+          enhancedText: enhancedPrompt,
+          success: true,
+          templateUsed: selectedTemplate?.name || null
         });
       }
     } catch (error) {
@@ -255,10 +327,82 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this._view.webview.postMessage({
           type: "enhancedPrompt",
           enhancedText: text,
-          success: false
+          success: false,
+          templateUsed: null
         });
       }
     }
+  }
+
+  private handleSimpleQueries(message: string): string | null {
+    const lowerMessage = message.toLowerCase().trim();
+    
+    console.log('SimpleQuery check:', lowerMessage);
+    
+    // Directory-related queries
+    const directoryQueries = [
+      'what is the current directory',
+      'what is current directory',
+      'current directory',
+      'working directory',
+      'what directory am i in',
+      'what directory',
+      'current dir',
+      'pwd',
+      'where am i',
+      'current folder',
+      'what folder am i in',
+      'show current directory',
+      'get current directory'
+    ];
+    
+    const hasDirectoryQuery = directoryQueries.some(query => lowerMessage.includes(query));
+    console.log('Directory query match:', hasDirectoryQuery, lowerMessage);
+    
+    if (hasDirectoryQuery) {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (workspaceFolders && workspaceFolders.length > 0) {
+        console.log('Returning workspace path:', workspaceFolders[0].uri.fsPath);
+        return workspaceFolders[0].uri.fsPath;
+      }
+      console.log('Returning process.cwd():', process.cwd());
+      return process.cwd();
+    }
+    
+    // Project name queries
+    const projectQueries = [
+      'what is the project name',
+      'project name',
+      'name of this project',
+      'what project is this'
+    ];
+    
+    if (projectQueries.some(query => lowerMessage.includes(query))) {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (workspaceFolders && workspaceFolders.length > 0) {
+        return workspaceFolders[0].name;
+      }
+      return 'No project opened';
+    }
+    
+    // Current file queries
+    const fileQueries = [
+      'what file am i in',
+      'current file',
+      'what file is open',
+      'active file',
+      'what file is this'
+    ];
+    
+    if (fileQueries.some(query => lowerMessage.includes(query))) {
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor) {
+        return activeEditor.document.fileName;
+      }
+      return 'No file is currently open';
+    }
+    
+    return null;
   }
 
   private shouldRoutToMCPHandler(message: string): boolean {
@@ -1100,6 +1244,145 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     return slashCommands[command] || message;
+  }
+
+  private async sendTemplates() {
+    try {
+      const templates = this.templateManager.getAllTemplates();
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "templatesData",
+          templates: templates
+        });
+      }
+    } catch (error) {
+      console.error("Error sending templates:", error);
+    }
+  }
+
+  private async createTemplate(templateData: any) {
+    try {
+      // Check if we're at the template limit
+      const currentTemplates = this.templateManager.getAllTemplates();
+      if (currentTemplates.length >= 10) {
+        if (this._view) {
+          this._view.webview.postMessage({
+            type: "templateError",
+            message: "Maximum number of templates (10) reached. Please delete some templates before creating new ones."
+          });
+        }
+        return;
+      }
+
+      const template = await this.templateManager.createTemplate(
+        templateData.name,
+        templateData.description,
+        templateData.category,
+        templateData.template
+      );
+      
+      // Send updated templates list
+      await this.sendTemplates();
+      
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "templateCreated",
+          template: template
+        });
+      }
+    } catch (error) {
+      console.error("Error creating template:", error);
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "templateError",
+          message: error instanceof Error ? error.message : "Failed to create template"
+        });
+      }
+    }
+  }
+
+  private async updateTemplate(updateData: any) {
+    try {
+      const template = await this.templateManager.updateTemplate(
+        updateData.id,
+        updateData
+      );
+      
+      if (template) {
+        // Send updated templates list
+        await this.sendTemplates();
+        
+        if (this._view) {
+          this._view.webview.postMessage({
+            type: "templateUpdated",
+            template: template
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating template:", error);
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "templateError",
+          message: "Failed to update template"
+        });
+      }
+    }
+  }
+
+  private async deleteTemplate(deleteData: any) {
+    try {
+      const success = await this.templateManager.deleteTemplate(deleteData.id);
+      
+      if (success) {
+        // Send updated templates list
+        await this.sendTemplates();
+        
+        if (this._view) {
+          this._view.webview.postMessage({
+            type: "templateDeleted",
+            templateId: deleteData.id
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "templateError",
+          message: "Failed to delete template"
+        });
+      }
+    }
+  }
+
+  private async selectTemplate(templateId: string | null) {
+    try {
+      this.templateManager.setSelectedTemplate(templateId);
+      
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "templateSelected",
+          templateId: templateId
+        });
+      }
+    } catch (error) {
+      console.error("Error selecting template:", error);
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "templateError",
+          message: "Failed to select template"
+        });
+      }
+    }
+  }
+
+  private async saveSettings() {
+    if (this._view) {
+      this._view.webview.postMessage({
+        type: "settingsSaved"
+      });
+    }
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {

@@ -140,6 +140,8 @@
   padding: 4px;
   cursor: pointer;
   border-radius: $radius-sm;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
   transition: all $transition-normal $easing-default;
   z-index: 2;
 

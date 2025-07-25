@@ -1,0 +1,481 @@
+// ============================================
+// Settings Modal Component
+// ============================================
+
+@use "../abstracts/variables" as *;
+@use "../abstracts/mixins" as *;
+
+// Settings Modal Overlay
+.settings-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  @include flex-center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all $transition-normal $easing-default;
+
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+// Settings Modal
+.settings-modal {
+  width: 100vw;
+  height: 100vh;
+  background: var(--vscode-editor-background);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.9) translateY(20px);
+  transition: all $transition-normal $easing-default;
+
+  .settings-modal-overlay.visible & {
+    transform: scale(1) translateY(0);
+  }
+}
+
+// Settings Header
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px;
+  background: var(--vscode-titleBar-activeBackground);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-title {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $text-primary;
+  margin: 0;
+}
+
+.settings-header-actions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.settings-action-btn {
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-sm;
+  border: none;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all $transition-normal $easing-default;
+  min-width: 70px;
+
+  &.secondary {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+    }
+  }
+
+  &.primary {
+    background: $brand-primary;
+    color: $text-inverse;
+
+    &:hover {
+      background: $brand-secondary;
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// Settings Content
+.settings-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+// Settings Sidebar
+.settings-sidebar {
+  width: 48px;
+  background: var(--vscode-sideBar-background);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  padding: $spacing-lg 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.settings-category {
+  @include flex-center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  cursor: pointer;
+  transition: all $transition-normal $easing-default;
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: $radius-md;
+  position: relative;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.05);
+  }
+
+  &.active {
+    background: rgba(255, 107, 53, 0.15);
+    color: $brand-primary;
+
+    .settings-category-icon svg {
+      color: $brand-primary;
+    }
+  }
+}
+
+.settings-category-icon {
+  @include flex-center;
+  width: 24px;
+  height: 24px;
+
+  svg {
+    transition: color $transition-normal $easing-default;
+  }
+}
+
+// Settings Main Content
+.settings-main {
+  flex: 1;
+  padding: $spacing-md;
+  overflow-y: auto;
+}
+
+.settings-panel {
+  display: none;
+
+  &.active {
+    display: block;
+  }
+}
+
+.settings-panel-header {
+  margin-bottom: $spacing-xl;
+
+  h3 {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $text-primary;
+    margin: 0 0 $spacing-xs 0;
+  }
+
+  p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: $font-size-md;
+    margin: 0;
+  }
+}
+
+.settings-section {
+  margin-bottom: $spacing-xl;
+}
+
+// Template Management
+.template-list {
+  background: var(--vscode-input-background);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-md;
+  min-height: 200px;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.template-empty-state {
+  @include flex-center;
+  flex-direction: column;
+  height: 100%;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+
+  h4 {
+    font-size: $font-size-md;
+    font-weight: $font-weight-medium;
+    margin: $spacing-md 0 $spacing-xs 0;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  p {
+    font-size: $font-size-sm;
+    margin: 0;
+  }
+}
+
+.template-empty-icon {
+  margin-bottom: $spacing-sm;
+}
+
+.add-template-btn {
+  @include flex-center(row, $spacing-xs);
+  padding: $spacing-sm $spacing-md;
+  background: $brand-primary;
+  color: $text-inverse;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: all $transition-normal $easing-default;
+
+  &:hover {
+    background: $brand-secondary;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+// Template Item (for when templates are loaded)
+.template-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-sm;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  transition: all $transition-normal $easing-default;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &.active {
+    border-color: $brand-primary;
+    background: rgba(255, 107, 53, 0.05);
+  }
+}
+
+.template-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-xs;
+}
+
+.template-name {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $text-primary;
+}
+
+.template-actions {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.template-action-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: $radius-sm;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all $transition-normal $easing-default;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  &.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+  }
+}
+
+.template-description {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: $spacing-sm;
+}
+
+.template-category {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(255, 107, 53, 0.2);
+  color: $brand-primary;
+  border-radius: $radius-sm;
+  font-size: 11px;
+  font-weight: $font-weight-medium;
+}
+
+// Template Edit Modal
+.template-edit-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  @include flex-center;
+  z-index: 10000;
+}
+
+.template-edit-modal {
+  width: 90%;
+  max-width: 600px;
+  max-height: 80%;
+  background: var(--vscode-editor-background);
+  border-radius: $radius-lg;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.template-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg;
+  background: var(--vscode-titleBar-activeBackground);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  
+  h3 {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $text-primary;
+    margin: 0;
+  }
+}
+
+.template-edit-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: $radius-sm;
+  transition: all $transition-normal $easing-default;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.template-edit-form {
+  padding: $spacing-lg;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.template-edit-field {
+  margin-bottom: $spacing-lg;
+  
+  &:last-of-type {
+    margin-bottom: $spacing-md;
+  }
+}
+
+.template-edit-label {
+  display: block;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.template-edit-input {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: var(--vscode-input-background);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: $radius-sm;
+  color: var(--vscode-input-foreground);
+  font-size: $font-size-sm;
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+    border-color: $brand-primary;
+    box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1);
+  }
+}
+
+.template-edit-textarea {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: var(--vscode-input-background);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: $radius-sm;
+  color: var(--vscode-input-foreground);
+  font-size: $font-size-sm;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  resize: vertical;
+  min-height: 200px;
+  
+  &:focus {
+    outline: none;
+    border-color: $brand-primary;
+    box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1);
+  }
+}
+
+.template-edit-actions {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: flex-end;
+  padding-top: $spacing-md;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+// Responsive Design
+@include respond-to("md") {
+  .settings-modal {
+    width: 95vw;
+    height: 90vh;
+  }
+
+  .settings-content {
+    flex-direction: column;
+  }
+
+  .settings-sidebar {
+    width: 100%;
+    height: 80px;
+    flex-direction: row;
+    justify-content: center;
+    padding: $spacing-md $spacing-lg;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    gap: $spacing-lg;
+  }
+
+  .settings-category {
+    width: 40px;
+    height: 40px;
+    margin: 0;
+  }
+}

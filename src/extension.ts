@@ -2,17 +2,20 @@ import * as vscode from 'vscode';
 import { ClaudeCodeService } from './core/claude-code-service';
 import { ClaudeDevCompletionProvider } from './features/completion/completion-provider';
 import { ChatViewProvider } from './ui/services/chat-view-provider';
+import { TemplateManager } from './core/template-manager';
 
 let claudeCodeService: ClaudeCodeService;
 let completionProvider: ClaudeDevCompletionProvider;
 let chatViewProvider: ChatViewProvider;
+let templateManager: TemplateManager;
 let statusBarItem: vscode.StatusBarItem;
 let completionProviderDisposable: vscode.Disposable | undefined;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     console.log('Claude Dev extension is now active!');
 
     initializeService();
+    await initializeTemplateManager(context);
     createStatusBarItem();
     registerCompletionProvider();
     registerChatView(context);
@@ -40,6 +43,25 @@ function initializeService() {
         model: config.get<string>('model', 'default'),
         thinkingMode: config.get<string>('thinkingMode', 'none')
     });
+}
+
+async function initializeTemplateManager(context: vscode.ExtensionContext) {
+    templateManager = new TemplateManager(context);
+    
+    // Clean up duplicates and enforce template limit
+    const duplicatesRemoved = await templateManager.cleanupDuplicateTemplates();
+    const excessRemoved = await templateManager.enforceTemplateLimit();
+    
+    if (duplicatesRemoved > 0 || excessRemoved > 0) {
+        console.log(`Template cleanup: removed ${duplicatesRemoved} duplicates and ${excessRemoved} excess templates`);
+    }
+    
+    // Create default templates if no templates exist
+    const existingTemplates = templateManager.getAllTemplates();
+    if (existingTemplates.length === 0) {
+        await templateManager.createDefaultSecurityTemplate();
+        await templateManager.createDefaultBugReportTemplate();
+    }
 }
 
 function createStatusBarItem() {
@@ -71,7 +93,7 @@ function registerCompletionProvider() {
 }
 
 function registerChatView(context: vscode.ExtensionContext) {
-    chatViewProvider = new ChatViewProvider(context.extensionUri, claudeCodeService, context);
+    chatViewProvider = new ChatViewProvider(context.extensionUri, claudeCodeService, context, templateManager);
     
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(ChatViewProvider.viewType, chatViewProvider)

@@ -146,7 +146,7 @@
   overflow-wrap: break-word;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding-left: 36px;
+  padding-left: 70px;
 
   &::-webkit-scrollbar {
     display: none;
@@ -162,6 +162,188 @@
     font-size: 12px;
     min-height: 18px;
     max-height: 100px;
-    padding-left: 30px;
+    padding-left: 58px;
   }
+}
+
+// Enhance Prompt Controls
+.enhance-prompt-controls {
+  position: absolute;
+  left: $spacing-xs;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 3;
+}
+
+.template-selector-btn {
+  position: absolute;
+  left: 36px;
+  width: 16px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  border-radius: 0 $radius-sm $radius-sm 0;
+  transition: all $transition-normal $easing-default;
+
+  &:hover {
+    background: rgba(255, 107, 53, 0.08);
+    border-color: rgba(255, 107, 53, 0.2);
+    color: rgba(255, 107, 53, 0.8);
+  }
+
+  &.active {
+    background: rgba(255, 107, 53, 0.1);
+    border-color: rgba(255, 107, 53, 0.3);
+    color: rgba(255, 107, 53, 0.9);
+  }
+
+  &.template-selected {
+    background: rgba(255, 107, 53, 0.15);
+    border-color: rgba(255, 107, 53, 0.4);
+    color: $brand-primary;
+    
+    &:hover {
+      background: rgba(255, 107, 53, 0.2);
+      border-color: rgba(255, 107, 53, 0.5);
+    }
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    transition: transform $transition-normal $easing-default;
+  }
+
+  &.active svg {
+    transform: rotate(180deg);
+  }
+
+  @include respond-to("xs") {
+    left: 30px;
+    width: 12px;
+    height: 24px;
+  }
+}
+
+.template-dropdown {
+  position: absolute;
+  bottom: calc(100% + 16px);
+  left: 0;
+  width: 300px;
+  background: var(--vscode-dropdown-background);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-md;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: all $transition-normal $easing-default;
+  z-index: 1001;
+  max-height: 300px;
+  overflow: hidden;
+
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+}
+
+.template-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.template-dropdown-title {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-primary;
+}
+
+.template-count {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: $radius-sm;
+}
+
+.template-dropdown-content {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: $spacing-xs 0;
+}
+
+.template-option {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  cursor: pointer;
+  transition: all $transition-normal $easing-default;
+  border-left: 3px solid transparent;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &.selected {
+    background: rgba(255, 107, 53, 0.1);
+    border-left-color: $brand-primary;
+
+    .template-option-name {
+      color: $brand-primary;
+    }
+  }
+}
+
+.template-option-icon {
+  @include flex-center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+
+  svg {
+    color: rgba(255, 255, 255, 0.6);
+    transition: color $transition-normal $easing-default;
+  }
+
+  .template-option.selected & svg {
+    color: $brand-primary;
+  }
+}
+
+.template-option-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-option-name {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+  transition: color $transition-normal $easing-default;
+}
+
+.template-option-desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

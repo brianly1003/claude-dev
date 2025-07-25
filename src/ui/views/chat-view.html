@@ -13,6 +13,24 @@
         <span>Claude Dev</span>
         <div class="status-indicator"></div>
       </div>
+      <div class="header-actions">
+        <button class="header-button" id="settingsButton" title="Settings">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div class="chat-container">
@@ -65,37 +83,67 @@
             <!-- Autocomplete suggestions will be populated here -->
           </div>
           <div class="input-row">
-            <button
-              class="compact-button"
-              aria-label="Enhance prompt with additional context"
-              title="Enhance prompt with additional context"
-              id="enhancePromptButton"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="lucide lucide-wand-sparkles w-4 h-4"
-                aria-hidden="true"
+            <div class="enhance-prompt-controls">
+              <button
+                class="compact-button"
+                aria-label="Enhance prompt with additional context"
+                title="Enhance prompt with additional context"
+                id="enhancePromptButton"
               >
-                <path
-                  d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"
-                ></path>
-                <path d="m14 7 3 3"></path>
-                <path d="M5 6v4"></path>
-                <path d="M19 14v4"></path>
-                <path d="M10 2v2"></path>
-                <path d="M7 8H3"></path>
-                <path d="M21 16h-4"></path>
-                <path d="M11 3H9"></path>
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="lucide lucide-wand-sparkles w-4 h-4"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"
+                  ></path>
+                  <path d="m14 7 3 3"></path>
+                  <path d="M5 6v4"></path>
+                  <path d="M19 14v4"></path>
+                  <path d="M10 2v2"></path>
+                  <path d="M7 8H3"></path>
+                  <path d="M21 16h-4"></path>
+                  <path d="M11 3H9"></path>
+                </svg>
+              </button>
+              <button
+                class="template-selector-btn"
+                id="templateSelectorBtn"
+                title="Select Template"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+              <div class="template-dropdown" id="templateDropdown">
+                <div class="template-dropdown-header">
+                  <span class="template-dropdown-title">Choose Template</span>
+                  <span class="template-count" id="templateCount">0/10</span>
+                </div>
+                <div class="template-dropdown-content" id="templateDropdownContent">
+                  <div class="template-option" data-template-id="none">
+                    <div class="template-option-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M8 12h8"/>
+                      </svg>
+                    </div>
+                    <div class="template-option-info">
+                      <div class="template-option-name">No Template</div>
+                      <div class="template-option-desc">Simple grammar correction</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <textarea
               id="messageInput"
               placeholder="Type your task here..."
@@ -552,6 +600,119 @@
         <div class="history-modal-content">
           <div class="history-conversation-list" id="historyConversationList">
             <div class="history-loading">Loading conversations...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal-overlay" id="settingsModalOverlay">
+      <div class="settings-modal">
+        <div class="settings-header">
+          <h2 class="settings-title">Settings</h2>
+          <div class="settings-header-actions">
+            <button class="settings-action-btn secondary" id="settingsSaveBtn">
+              Save
+            </button>
+            <button class="settings-action-btn primary" id="settingsDoneBtn">
+              Done
+            </button>
+          </div>
+        </div>
+        
+        <div class="settings-content">
+          <div class="settings-sidebar">
+            <div class="settings-category" data-category="enhance-prompt" title="Enhance Prompt">
+              <div class="settings-category-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/>
+                  <path d="m14 7 3 3"/>
+                  <path d="M5 6v4"/>
+                  <path d="M19 14v4"/>
+                  <path d="M10 2v2"/>
+                  <path d="M7 8H3"/>
+                  <path d="M21 16h-4"/>
+                  <path d="M11 3H9"/>
+                </svg>
+              </div>
+            </div>
+            
+            <div class="settings-category" data-category="general" title="General">
+              <div class="settings-category-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/>
+                </svg>
+              </div>
+            </div>
+            
+            <div class="settings-category" data-category="appearance" title="Appearance">
+              <div class="settings-category-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div class="settings-main">
+            <!-- Enhance Prompt Settings -->
+            <div class="settings-panel" id="enhance-prompt-panel">
+              <div class="settings-panel-header">
+                <h3>Enhance Prompt Templates</h3>
+                <p>Configure templates to structure your enhanced prompts</p>
+              </div>
+              
+              <div class="settings-section">
+                <div class="template-list" id="templateList">
+                  <div class="template-empty-state">
+                    <div class="template-empty-icon">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4">
+                        <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/>
+                        <path d="m14 7 3 3"/>
+                        <path d="M5 6v4"/>
+                        <path d="M19 14v4"/>
+                        <path d="M10 2v2"/>
+                        <path d="M7 8H3"/>
+                        <path d="M21 16h-4"/>
+                        <path d="M11 3H9"/>
+                      </svg>
+                    </div>
+                    <h4>No templates yet</h4>
+                    <p>Create your first template to get started</p>
+                  </div>
+                </div>
+                
+                <button class="add-template-btn" id="addTemplateBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                  </svg>
+                  Add Template
+                </button>
+              </div>
+            </div>
+            
+            <!-- General Settings -->
+            <div class="settings-panel" id="general-panel" style="display: none;">
+              <div class="settings-panel-header">
+                <h3>General Settings</h3>
+                <p>Configure general application settings</p>
+              </div>
+              <div class="settings-section">
+                <p>General settings content coming soon...</p>
+              </div>
+            </div>
+            
+            <!-- Appearance Settings -->
+            <div class="settings-panel" id="appearance-panel" style="display: none;">
+              <div class="settings-panel-header">
+                <h3>Appearance</h3>
+                <p>Customize the look and feel</p>
+              </div>
+              <div class="settings-section">
+                <p>Appearance settings content coming soon...</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
