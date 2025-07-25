@@ -126,6 +126,85 @@
   }
 }
 
+// Enhance Prompt Button
+#enhancePromptButton {
+  position: absolute;
+  left: $spacing-sm;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: $radius-sm;
+  transition: all $transition-normal $easing-default;
+  z-index: 2;
+
+  &:hover {
+    background: rgba(255, 107, 53, 0.1);
+    border-color: rgba(255, 107, 53, 0.3);
+    color: rgba(255, 107, 53, 0.9);
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+  }
+
+  &:active {
+    transform: translateY(-50%) scale(0.98);
+    box-shadow: 0 1px 3px rgba(255, 107, 53, 0.15);
+  }
+
+  &.processing {
+    background: rgba(255, 107, 53, 0.1);
+    border-color: rgba(255, 107, 53, 0.3);
+    color: rgba(255, 107, 53, 0.9);
+    cursor: not-allowed;
+
+    svg {
+      animation: rotate 1s linear infinite;
+    }
+
+    &:hover {
+      transform: translateY(-50%);
+      box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+    }
+  }
+
+  svg {
+    width: 17px;
+    height: 17px;
+    transition: all $transition-normal $easing-default;
+  }
+
+  &:hover:not(.processing) svg {
+    transform: rotate(-10deg);
+  }
+
+  @include respond-to("xs") {
+    width: 24px;
+    height: 24px;
+    padding: 3px;
+    left: 6px;
+
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+  }
+}
+
+// Animation for rotating icon
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 // History Button
 .history-button {
   @include button-base($spacing-xs + 2px, $spacing-md);

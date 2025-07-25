@@ -124,6 +124,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         case "stopGeneration":
           await this.stopGeneration();
           break;
+        case "enhancePrompt":
+          await this.handleEnhancePrompt(data.text);
+          break;
         default:
           console.log("Unhandled message type:", data.type, data);
           break;
@@ -223,6 +226,40 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+
+  private async handleEnhancePrompt(text: string) {
+    try {
+      // Use Claude Code SDK to enhance the prompt with grammar correction
+      const completionRequest: CompletionRequest = {
+        prompt: `Please improve the following prompt by correcting any grammar, spelling, or punctuation errors. Make it clearer and more concise while preserving the original intent. Only return the improved prompt without any explanation or additional text:
+
+"${text}"`,
+        context: "",
+        language: "text",
+      };
+
+      const response = await this.claudeCodeService.getCompletion(completionRequest);
+      
+      // Send the enhanced prompt back to the webview
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "enhancedPrompt",
+          enhancedText: response.suggestion.trim(),
+          success: true
+        });
+      }
+    } catch (error) {
+      console.error("Error enhancing prompt:", error);
+      // Send back the original text if enhancement fails
+      if (this._view) {
+        this._view.webview.postMessage({
+          type: "enhancedPrompt",
+          enhancedText: text,
+          success: false
+        });
+      }
+    }
+  }
 
   private shouldRoutToMCPHandler(message: string): boolean {
     const lowerMessage = message.toLowerCase();

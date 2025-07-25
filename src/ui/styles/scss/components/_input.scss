@@ -2,11 +2,11 @@
 // Input Components
 // ============================================
 
-@use '../abstracts/variables' as *;
-@use '../abstracts/mixins' as *;
+@use "../abstracts/variables" as *;
+@use "../abstracts/mixins" as *;
 
 .input-container {
-  padding: $spacing-md $spacing-md;
+  padding: 12px;
   background: var(--vscode-panel-background);
   border-top: 1px solid $border-primary;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
@@ -15,20 +15,25 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  
+
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, $brand-primary, transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      $brand-primary,
+      transparent
+    );
     opacity: 0.3;
   }
-  
-  @include respond-to('xs') {
-    padding: $spacing-sm $spacing-md;
+
+  @include respond-to("xs") {
+    padding: $spacing-sm;
     min-height: 76px;
     gap: $spacing-xs;
   }
@@ -52,27 +57,27 @@
   font-weight: $font-weight-medium;
   transition: all $transition-normal $easing-default;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  
+
   &:hover {
     background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.2);
     transform: scale(1.02);
   }
-  
+
   &.warning {
     background: rgba(245, 158, 11, 0.1);
     border-color: rgba(245, 158, 11, 0.3);
     color: $state-warning;
   }
-  
+
   &.error {
     background: rgba(239, 68, 68, 0.1);
     border-color: rgba(239, 68, 68, 0.3);
     color: $state-error;
     animation: errorPulse 2s infinite;
   }
-  
-  @include respond-to('xs') {
+
+  @include respond-to("xs") {
     font-size: 11px;
     padding: $spacing-xs $spacing-sm;
   }
@@ -94,16 +99,17 @@
   position: relative;
   background: var(--vscode-input-background);
   border: 2px solid var(--vscode-input-border);
-  border-radius: $radius-lg;
+  border-radius: $radius-md;
   transition: all $transition-normal $easing-default;
   width: 100%;
   min-width: 0;
   overflow: visible;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  
+
   &:focus-within {
     border-color: $brand-primary;
-    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1), 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1),
+      0 4px 12px rgba(0, 0, 0, 0.15);
     transform: translateY(-1px);
   }
 }
@@ -111,13 +117,14 @@
 .input-row {
   @include flex-center(row, $spacing-sm);
   justify-content: flex-start;
-  padding: $spacing-sm $spacing-sm;
-  min-height: $input-min-height;
+  padding: $spacing-sm;
+  min-height: 40px;
   width: 100%;
-  
-  @include respond-to('xs') {
-    padding: 10px $spacing-md;
-    min-height: 44px;
+  position: relative;
+
+  @include respond-to("xs") {
+    padding: $spacing-sm;
+    min-height: 36px;
   }
 }
 
@@ -126,11 +133,11 @@
   border: none;
   background: transparent;
   color: var(--vscode-input-foreground);
-  font-size: 15px;
+  font-size: 13px;
   font-family: inherit;
   resize: none;
   outline: none;
-  min-height: 24px;
+  min-height: 20px;
   max-height: 120px;
   line-height: 1.5;
   width: 100%;
@@ -139,19 +146,22 @@
   overflow-wrap: break-word;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  
+  padding-left: 36px;
+
   &::-webkit-scrollbar {
     display: none;
   }
-  
+
   &::placeholder {
     color: var(--vscode-input-placeholderForeground);
     opacity: 0.7;
+    font-size: 13px;
   }
-  
-  @include respond-to('xs') {
-    font-size: 14px;
-    min-height: 22px;
+
+  @include respond-to("xs") {
+    font-size: 12px;
+    min-height: 18px;
     max-height: 100px;
+    padding-left: 30px;
   }
 }

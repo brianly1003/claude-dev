@@ -1002,9 +1002,17 @@ function updateStreamingMessage(messageId, content, isComplete) {
 }
 
 function autoResize() {
+  // Reset height to auto to get accurate scrollHeight
   messageInput.style.height = "auto";
-  const newHeight = Math.min(messageInput.scrollHeight, 100);
+  // Calculate new height, with max-height of 120px (matching CSS)
+  const scrollHeight = messageInput.scrollHeight;
+  const newHeight = Math.min(Math.max(scrollHeight, 20), 120);
   messageInput.style.height = newHeight + "px";
+  
+  // Ensure the textarea is scrolled to bottom if content exceeds max height
+  if (scrollHeight > 120) {
+    messageInput.scrollTop = scrollHeight;
+  }
 }
 
 // === Token Management ===
@@ -1718,6 +1726,41 @@ sendButton.addEventListener("click", () => {
   }
 });
 
+// Enhance Prompt Button
+const enhancePromptButton = document.getElementById("enhancePromptButton");
+let isEnhancing = false;
+
+enhancePromptButton.addEventListener("click", () => {
+  // Prevent multiple clicks while processing
+  if (isEnhancing) {
+    return;
+  }
+  
+  const currentText = messageInput.value.trim();
+  
+  if (!currentText) {
+    // Show help text when input is empty
+    messageInput.value = "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.";
+    messageInput.focus();
+    // Small delay to ensure DOM updates before resizing
+    setTimeout(() => {
+      autoResize();
+      updateInputTokenCount();
+    }, 10);
+  } else {
+    // Start processing animation
+    isEnhancing = true;
+    enhancePromptButton.classList.add("processing");
+    enhancePromptButton.disabled = true;
+    
+    // Send message to extension to enhance the prompt
+    vscode.postMessage({
+      type: "enhancePrompt",
+      text: currentText
+    });
+  }
+});
+
 // Model Controls
 let currentSelectedModel = "default";
 
@@ -1898,6 +1941,21 @@ window.addEventListener("message", (event) => {
       updateSendButtonState();
       hideTypingIndicator();
       break;
+    case "enhancedPrompt":
+      // Stop processing animation
+      isEnhancing = false;
+      enhancePromptButton.classList.remove("processing");
+      enhancePromptButton.disabled = false;
+      
+      // Update the input with the enhanced prompt
+      messageInput.value = message.enhancedText;
+      messageInput.focus();
+      // Small delay to ensure DOM updates before resizing
+      setTimeout(() => {
+        autoResize();
+        updateInputTokenCount();
+      }, 10);
+      break;
   }
 });
 
@@ -1911,10 +1969,15 @@ hideCustomServerForm();
 hideHistoryModal();
 hideModelDropdown();
 
+// Auto-focus the input field on first load
+messageInput.focus();
+
 vscode.postMessage({ type: "requestSettings" });
 vscode.postMessage({ type: "requestConversation" });
 
 // Mark as initialized after a short delay to ensure all initial messages are processed
 setTimeout(() => {
   isInitialized = true;
+  // Ensure focus is set after initialization
+  messageInput.focus();
 }, 100);
